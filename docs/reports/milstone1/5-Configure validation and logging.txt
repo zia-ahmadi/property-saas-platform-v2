@@ -1,0 +1,96 @@
+
+Milestone 1 Report: Validation and Logging
+Implementation completed — basic level
+The validation and basic logging foundation has been implemented and tested in property-core.
+
+1. Request validation
+Implemented:
+
+Created UserRegistrationRequest DTO.
+
+Added Jakarta Bean Validation annotations:
+
+@NotBlank
+
+@Email
+
+@Size
+
+Applied @Valid in UserController.
+
+Added validation exception handling in GlobalExceptionHandler.
+
+Test results:
+
+Test
+
+HTTP response
+
+Result
+
+Invalid email
+
+400 Bad Request
+
+Passed
+
+Blank first name
+
+400 Bad Request
+
+Passed
+
+Valid registration data
+
+200 OK
+
+Passed
+
+2. Global exception handling
+Implemented GlobalExceptionHandler with:
+
+@RestControllerAdvice
+
+Centralized validation error handling.
+
+Standardized ErrorResponse.
+
+HTTP status, timestamp, error message, and request path.
+
+Generic exception handling for unexpected errors.
+
+3. Basic logging
+Implemented SLF4J logging:
+
+private static final Logger logger =
+        LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+Unexpected exceptions are recorded with their request path and exception details.
+
+4. Verification
+Maven compilation: successful.
+
+Automated tests: 3 passed, 0 failed.
+
+Invalid request test: passed.
+
+Valid request test: passed.
+
+Application startup: successful.
+
+5. Remaining improvements
+These are future enhancements, not blockers for the current milestone:
+
+Structured JSON logging.
+
+Request correlation IDs.
+
+Centralized audit logging.
+
+Additional validation tests.
+
+Domain-specific exception handling.
+
+Final assessment: Configure Validation and Logging is completed at the foundational level. Basic request validation, centralized error responses, and exception logging are implemented and verified.
+
+You can mark this task as Completed in your Milestone 1 checklist.
