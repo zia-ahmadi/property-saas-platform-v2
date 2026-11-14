@@ -1,0 +1,13 @@
+set -gx POSTGRES_PASSWORD (sed -n 's/^POSTGRES_PASSWORD=//p' ../../.env)
+
+                                                           if test -n "$POSTGRES_PASSWORD"
+                                                               echo "POSTGRES_PASSWORD is loaded"
+                                                           else
+                                                               echo "POSTGRES_PASSWORD is missing"
+                                                           end
+
+
+
+set -gx JWT_SECRET (sed -n 's/^JWT_SECRET=//p' ../../.env)
+
+test -n "$JWT_SECRET"; and echo "JWT_SECRET is loaded"; or echo "JWT_SECRET is missing"

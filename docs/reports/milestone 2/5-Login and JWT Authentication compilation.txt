@@ -1,0 +1,227 @@
+# Implementation Report: Login and JWT Authentication
+
+**Project:** Property SaaS Platform  
+**Module:** `backend/property-core`  
+**Technology:** Java 21, Spring Boot 4.1.1, Spring Security, Spring Data JPA, PostgreSQL  
+**Status:** Implemented and tested
+
+## 1. Overview
+
+The Login and JWT Authentication module provides secure authentication for registered users of the Property SaaS Platform.
+
+It verifies user credentials, checks account status, generates a signed JWT access token, and returns the user's active organization memberships.
+
+The implementation supports the platform's multi-tenant architecture, where one user can belong to multiple organizations.
+
+## 2. Implemented Components
+
+### 2.1 Login API
+
+**Endpoint:** `POST /api/v1/auth/login`
+
+The endpoint accepts an email address and password.
+
+Example request:
+
+```json
+{
+  "email": "zia.test@example.com",
+  "password": "your-password"
+}
+```
+
+The request is validated using Jakarta Bean Validation:
+
+- Email must be valid and cannot be blank.
+- Password cannot be blank.
+- Email length is limited to 320 characters.
+- Password length is limited to 72 characters.
+
+### 2.2 Authentication Service
+
+Implemented in:
+
+`auth/service/AuthenticationService.java`
+
+The authentication service performs the following operations:
+
+1. Normalizes the email address by trimming whitespace and converting it to lowercase.
+2. Retrieves the user using case-insensitive email lookup.
+3. Verifies that the user account is active.
+4. Compares the submitted password against the stored BCrypt password hash.
+5. Generates a signed JWT access token after successful authentication.
+6. Retrieves the user's active organization memberships.
+7. Excludes memberships associated with suspended organizations.
+8. Returns the authentication response.
+
+Invalid email addresses, incorrect passwords, and suspended accounts receive the same authentication error message to avoid revealing unnecessary account information.
+
+### 2.3 JWT Configuration
+
+Implemented in:
+
+`config/security/jwt/JwtConfig.java`
+
+JWT configuration uses Spring Security's OAuth2 JOSE support and Nimbus JWT.
+
+**Token configuration:**
+
+| Property | Configuration |
+|---|---|
+| Signing algorithm | HS256 |
+| Token type | Bearer |
+| Issuer | `property-core` |
+| Access token lifetime | 900 seconds (15 minutes) |
+| Signing key | Base64-encoded secret from environment configuration |
+| Minimum key length | 32 bytes |
+
+The signing secret is supplied through the `JWT_SECRET` environment variable. It is not hardcoded in the application source code.
+
+The JWT contains the following claims:
+
+- `iss`: Token issuer.
+- `sub`: Authenticated user's UUID.
+- `iat`: Token issuance time.
+- `exp`: Token expiration time.
+- `jti`: Unique token identifier.
+
+The token is signed using HS256 and can be validated through the configured JWT decoder.
+
+### 2.4 Login Response
+
+Implemented using:
+
+- `LoginResponse.java`
+- `OrganizationMembershipResponse.java`
+
+A successful login returns:
+
+- Access token
+- Token type
+- Token expiration time
+- User ID
+- Email address
+- First name
+- Last name
+- Active organization memberships
+
+Each organization membership contains its organization ID, name, slug, and membership role.
+
+### 2.5 Spring Security Configuration
+
+Implemented in:
+
+`config/security/SecurityConfig.java`
+
+The security configuration includes:
+
+- Stateless session management.
+- CSRF disabled for the stateless API.
+- JWT-based authentication for protected endpoints.
+- Public access to user registration and login endpoints.
+- Authentication required for other endpoints.
+- BCrypt password encoder with strength 12.
+
+Public endpoints:
+
+- `POST /api/v1/users/register`
+- `POST /api/v1/auth/login`
+
+## 3. Multi-Tenant Authentication Design
+
+The authentication implementation follows the platform's multi-tenant architecture.
+
+Important design decisions:
+
+- A user can belong to multiple organizations.
+- Only active memberships are returned during login.
+- Memberships belonging to suspended organizations are excluded.
+- The JWT identifies the authenticated user, not a selected organization.
+- Organization-level authorization and membership verification must be enforced by the backend when accessing organization-owned resources.
+- Renters remain separate contact records rather than staff user accounts.
+
+This design avoids trusting an organization or tenant ID supplied directly by the client.
+
+## 4. Testing and Verification
+
+Two authentication test classes were implemented.
+
+### 4.1 AuthenticationServiceTest
+
+**6 tests passed.**
+
+The tests cover:
+
+1. Successful login and authentication response.
+2. Inclusion of active organization memberships.
+3. Exclusion of memberships belonging to suspended organizations.
+4. Rejection of incorrect passwords.
+5. Rejection of unknown email addresses.
+6. Rejection of suspended user accounts.
+
+JWT claims, including issuer, subject, issuance time, expiration time, and unique token ID, are also verified.
+
+### 4.2 AuthControllerTest
+
+**3 tests passed.**
+
+The tests verify:
+
+1. Valid credentials return HTTP 200.
+2. Invalid credentials return HTTP 401.
+3. Invalid request fields return HTTP 400.
+
+### 4.3 Full Project Test Results
+
+The complete Maven test suite was executed using:
+
+```bash
+./mvnw clean test
+```
+
+| Test class | Tests | Result |
+|---|---:|---|
+| AuthControllerTest | 3 | Passed |
+| AuthenticationServiceTest | 6 | Passed |
+| PropertyCoreApplicationTests | 1 | Passed |
+| UserRegistrationRequestTest | 2 | Passed |
+| **Total** | **12** | **All passed** |
+
+**Final result: BUILD SUCCESS**
+
+PostgreSQL connectivity, Flyway migration validation, and JPA initialization were also verified during the full application context test.
+
+## 5. Security Considerations
+
+The implementation includes the following security measures:
+
+- Passwords are verified using BCrypt rather than plaintext comparison.
+- JWT signing secrets are managed through environment configuration.
+- Access tokens have a limited lifetime of 15 minutes.
+- Invalid credentials produce a consistent authentication error.
+- Suspended users cannot authenticate.
+- Suspended organizations are excluded from the active membership response.
+- The API uses stateless security rather than server-side HTTP sessions.
+
+## 6. Remaining Work
+
+The following functionality is not yet implemented and belongs to subsequent development tasks:
+
+1. Refresh token generation and rotation.
+2. Refresh token storage and revocation.
+3. Logout and token invalidation strategy.
+4. Organization selection and active membership verification.
+5. Role-based authorization for organization resources.
+6. Additional integration and security tests for protected endpoints.
+
+These items are intentionally kept separate from the completed login and access-token implementation.
+
+## 7. Conclusion
+
+The Login and JWT Authentication module has been implemented and successfully tested.
+
+It provides credential verification, account-status validation, signed JWT access-token generation, and active organization membership information.
+
+The implementation establishes the authentication foundation for the Property SaaS Platform's multi-tenant backend.
+
+**Completion status:** Login and JWT access-token implementation completed. Full test suite: 12 passed, 0 failures.
