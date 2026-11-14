@@ -1,6 +1,7 @@
 
 package com.propertysaas.propertycore.common.exception;
 
+
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.slf4j.Logger;
@@ -47,6 +48,41 @@ public class GlobalExceptionHandler {
                 .body(errorResponse);
     }
 
+    @ExceptionHandler(ConflictException.class)
+        public ResponseEntity<ErrorResponse> handleConflictException(
+        ConflictException exception,
+        HttpServletRequest request
+) {
+    ErrorResponse errorResponse = new ErrorResponse(
+            Instant.now(),
+            HttpStatus.CONFLICT.value(),
+            HttpStatus.CONFLICT.getReasonPhrase(),
+            exception.getMessage(),
+            request.getRequestURI()
+    );
+
+    return ResponseEntity
+            .status(HttpStatus.CONFLICT)
+            .body(errorResponse);
+}
+
+@ExceptionHandler(IllegalArgumentException.class)
+public ResponseEntity<ErrorResponse> handleBadRequestException(
+        IllegalArgumentException exception,
+        HttpServletRequest request
+) {
+    ErrorResponse errorResponse = new ErrorResponse(
+            Instant.now(),
+            HttpStatus.BAD_REQUEST.value(),
+            HttpStatus.BAD_REQUEST.getReasonPhrase(),
+            exception.getMessage(),
+            request.getRequestURI()
+    );
+
+    return ResponseEntity
+            .status(HttpStatus.BAD_REQUEST)
+            .body(errorResponse);
+}
     // Handle unexpected exceptions (HTTP 500)
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGlobalException(

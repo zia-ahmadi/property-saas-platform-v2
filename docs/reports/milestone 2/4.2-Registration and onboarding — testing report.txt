@@ -1,0 +1,19 @@
+Registration and onboarding — testing report
+All three registration scenarios have now been tested:
+Test	Result
+Valid registration	201 Created
+Duplicate email	409 Conflict
+Duplicate organization slug	409 Conflict
+
+The registration endpoint successfully creates a user, organization, and OWNER membership.
+
+Registration and onboarding — completed
+- User, organization, and membership entities implemented.
+- Repositories and registration service implemented.
+- Public registration endpoint tested successfully (201 Created).
+- Duplicate email and organization slug correctly return 409 Conflict.
+- Database records verified, including the active owner membership.
+- Temporary validation endpoint removed.
+- Security configuration cleaned up.
+- Full test suite passes: 3 tests, 0 failures, 0 errors.
+- Flyway successfully validated migration V1.

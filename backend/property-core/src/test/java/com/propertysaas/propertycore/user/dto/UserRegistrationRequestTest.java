@@ -1,4 +1,3 @@
-
 package com.propertysaas.propertycore.user.dto;
 
 import jakarta.validation.Validation;
@@ -36,7 +35,10 @@ class UserRegistrationRequestTest {
                 new UserRegistrationRequest(
                         "invalid-email",
                         " ",
-                        "A".repeat(101)
+                        "A".repeat(101),
+                        "",
+                        "A".repeat(151),
+                        "Invalid Slug!"
                 );
 
         Set<ConstraintViolation<UserRegistrationRequest>> violations =
@@ -48,10 +50,19 @@ class UserRegistrationRequestTest {
                 .anyMatch(v -> v.getPropertyPath().toString().equals("email")));
 
         assertTrue(violations.stream()
+                .anyMatch(v -> v.getPropertyPath().toString().equals("password")));
+
+        assertTrue(violations.stream()
                 .anyMatch(v -> v.getPropertyPath().toString().equals("firstName")));
 
         assertTrue(violations.stream()
                 .anyMatch(v -> v.getPropertyPath().toString().equals("lastName")));
+
+        assertTrue(violations.stream()
+                .anyMatch(v -> v.getPropertyPath().toString().equals("organizationName")));
+
+        assertTrue(violations.stream()
+                .anyMatch(v -> v.getPropertyPath().toString().equals("organizationSlug")));
     }
 
     @Test
@@ -59,8 +70,11 @@ class UserRegistrationRequestTest {
         UserRegistrationRequest request =
                 new UserRegistrationRequest(
                         "user@example.com",
+                        "StrongPassword123!",
                         "Mohammad",
-                        "Ahmadi"
+                        "Ahmadi",
+                        "Acme Properties",
+                        "acme-properties"
                 );
 
         Set<ConstraintViolation<UserRegistrationRequest>> violations =
