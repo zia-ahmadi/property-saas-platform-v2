@@ -1,4 +1,4 @@
-package com.example.property_core;
+package com.propertysaas.propertycore;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
