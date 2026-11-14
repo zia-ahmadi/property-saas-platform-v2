@@ -1,0 +1,175 @@
+Property Core — Implementation Report
+
+Project: Property SaaS Platform
+Service: property-core
+Technology: Java 21, Spring Boot, Maven
+
+1. Package Architecture
+
+Status: Complete
+
+Established the foundational package structure under:
+
+com.propertysaas.propertycore
+
+Package
+
+Responsibility
+
+config.security
+
+Security configuration
+
+config.database
+
+Database configuration
+
+common.exception
+
+Centralized exception handling
+
+common.response
+
+Standard API response structures
+
+common.validation
+
+Shared validation components
+
+security
+
+Authentication and authorization
+
+tenancy
+
+Multi-tenant context and isolation
+
+organization
+
+Organization management
+
+user
+
+User management
+
+property
+
+Property management
+
+unit
+
+Rental unit management
+
+resident
+
+Resident management
+
+lease
+
+Lease management
+
+maintenance
+
+Maintenance operations
+
+billing
+
+Billing and payment operations
+
+audit
+
+Audit logging
+
+Architecture decisions:
+
+Adopted domain-oriented package organization.
+
+Separated shared infrastructure from business domains.
+
+Avoided creating unnecessary empty subpackages.
+
+Established a structure that can grow as features are implemented.
+
+2. Global Exception Handling
+
+Status: Implementation complete
+
+Implemented centralized exception handling in:
+
+common/exception/GlobalExceptionHandler.java
+
+Components
+
+ErrorResponse.java
+
+Implemented as a Java record containing:
+
+timestamp — time of the error.
+
+status — HTTP status code.
+
+error — HTTP status description.
+
+message — safe message for API clients.
+
+path — requested endpoint.
+
+GlobalExceptionHandler.java
+
+Implemented using Spring's @RestControllerAdvice and @ExceptionHandler(Exception.class).
+
+Current behavior
+
+Intercepts unexpected exceptions.
+
+Logs the request URI and exception stack trace using SLF4J.
+
+Returns HTTP 500 Internal Server Error.
+
+Provides a standardized ErrorResponse.
+
+Hides internal exception details from API clients.
+
+Security consideration
+
+The API returns a generic error message rather than exposing stack traces, database details, or internal implementation information.
+
+Current limitation
+
+The handler currently provides a general HTTP 500 response. Specific exceptions, such as validation failures and missing resources, will need dedicated handlers to return appropriate HTTP 4xx responses.
+
+3. Implementation Summary
+
+Task
+
+Status
+
+Domain-oriented package architecture
+
+Complete
+
+Shared infrastructure packages
+
+Complete
+
+Standardized error response
+
+Complete
+
+Centralized exception handling
+
+Complete
+
+SLF4J error logging
+
+Complete
+
+Specific exception mappings
+
+Future enhancement
+
+Automated exception behavior tests
+
+Pending
+
+Overall: Both foundational implementations are in place. Automated verification and dedicated exception behavior tests remain separate tasks.
