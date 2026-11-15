@@ -4,6 +4,7 @@ package com.propertysaas.propertycore.auth;
 import com.propertysaas.propertycore.auth.dto.LoginRequest;
 import com.propertysaas.propertycore.auth.dto.LoginResponse;
 import com.propertysaas.propertycore.auth.dto.OrganizationMembershipResponse;
+import com.propertysaas.propertycore.auth.refresh.service.RefreshTokenService;
 import com.propertysaas.propertycore.auth.service.AuthenticationService;
 import com.propertysaas.propertycore.organization.membership.entity.MembershipStatus;
 import com.propertysaas.propertycore.organization.membership.repository.OrganizationMembershipRepository;
@@ -13,12 +14,14 @@ import com.propertysaas.propertycore.organization.entity.OrganizationStatus;
 import org.mockito.ArgumentCaptor;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.propertysaas.propertycore.common.exception.AuthenticationException;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+
 import com.propertysaas.propertycore.organization.entity.Organization;
 import com.propertysaas.propertycore.organization.membership.entity.MembershipRole;
 import com.propertysaas.propertycore.organization.membership.entity.OrganizationMembership;
@@ -49,8 +52,11 @@ class AuthenticationServiceTest {
     @Mock
     private OrganizationMembershipRepository membershipRepository;
 
+
     @Mock
     private PasswordEncoder passwordEncoder;
+    @Mock
+        private RefreshTokenService refreshTokenService;
 
     @Mock
     private JwtEncoder jwtEncoder;
@@ -59,24 +65,34 @@ class AuthenticationServiceTest {
 
     private AutoCloseable mocks;
 
-    @BeforeEach
-    void setUp() {
+
+        @BeforeEach
+        void setUp() {
+        // Initialize all @Mock fields first.
         mocks = MockitoAnnotations.openMocks(this);
 
+        // Configure the refresh-token mock.
+        when(refreshTokenService.createToken(any(User.class)))
+                .thenReturn("test-refresh-token");
+
+        // Create the service with initialized dependencies.
         authenticationService = new AuthenticationService(
                 userRepository,
                 membershipRepository,
                 passwordEncoder,
                 jwtEncoder,
+                refreshTokenService,
                 "property-core",
                 900
         );
-    }
+        }
 
-    @AfterEach
-    void tearDown() throws Exception {
-        mocks.close();
-    }
+@AfterEach
+void tearDown() throws Exception {
+    mocks.close();
+}
+
+
 
     @Test
     void loginShouldReturnAccessTokenWhenCredentialsAreValid() {
@@ -121,6 +137,9 @@ class AuthenticationServiceTest {
         );
 
         assertEquals("test-access-token", response.accessToken());
+        assertEquals("test-refresh-token", response.refreshToken());
+
+verify(refreshTokenService).createToken(user);
         assertEquals("Bearer", response.tokenType());
         assertEquals(900, response.expiresIn());
         assertEquals(userId, response.userId());

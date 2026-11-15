@@ -1,0 +1,136 @@
+Milestone 2 — Refresh Token Rotation Completion Report
+Project: Multi-Tenant Property Leasing, Billing, and Maintenance SaaS
+Module: property-core | Date: November 15, 2026
+Completed
+
+1. Executive summary
+The Refresh Token Rotation feature has been implemented, integrated with the authentication system, refactored, and verified through automated testing.
+
+The feature allows authenticated users to obtain a new JWT access token without submitting their credentials again. Each successful refresh operation replaces the previous refresh token, while reuse detection invalidates the associated token family.
+
+The implementation meets the agreed functional scope of Milestone 2, Task 6 — Refresh Token Rotation.
+2. Technology stack
+Component	Technology
+Language	Java 21
+Framework	Spring Boot 4.1.1
+Security	Spring Security, JWT HS256
+Database	PostgreSQL 15
+Persistence	Spring Data JPA, Hibernate 7
+Database migrations	Flyway
+Testing	JUnit 5, Mockito, Spring Boot Test
+Build tool	Maven
+
+3. Implemented functionality
+Feature	Description	Status
+Token generation	Generates cryptographically secure random refresh tokens	Complete
+Token hashing	Stores SHA-256 token hashes instead of raw tokens	Complete
+Database persistence	Persists refresh tokens with expiration and family identifiers	Complete
+Token validation	Rejects expired, revoked, or invalid tokens	Complete
+Token rotation	Issues a replacement refresh token and revokes the previous token	Complete
+Reuse detection	Detects attempts to reuse revoked refresh tokens	Complete
+Family revocation	Revokes related tokens when reuse is detected	Complete
+Database locking	Uses pessimistic locking during rotation	Complete
+JWT integration	Issues a new access token during refresh	Complete
+Service refactoring	Eliminates the redundant refresh-token lookup	Complete
+
+4. Implementation structure
+The main files involved in this feature are:
+property-core/
+└── src/
+    ├── main/java/com/propertysaas/propertycore/
+    │   └── auth/
+    │       ├── dto/
+    │       │   ├── RefreshTokenRequest.java
+    │       │   └── RefreshTokenResponse.java
+    │       ├── service/
+    │       │   └── AuthenticationService.java
+    │       └── refresh/
+    │           ├── dto/
+    │           │   └── RefreshTokenRotationResult.java
+    │           ├── entity/
+    │           │   └── RefreshToken.java
+    │           ├── repository/
+    │           │   └── RefreshTokenRepository.java
+    │           └── service/
+    │               └── RefreshTokenService.java
+    └── main/resources/db/migration/
+        └── V2__create_refresh_tokens.sql
+
+
+The refresh-token endpoint is handled through the existing authentication controller.
+5. Refresh token rotation workflow
+Client sends refresh token
+
+Authentication refresh endpoint
+
+
+Hash token and lock database record
+
+SHA-256 + PostgreSQL pessimistic locking
+
+
+Validate refresh token
+Valid
+
+Create replacement token and new JWT
+
+Invalid
+
+Reject request; revoke family if reuse detected
+
+
+
+
+Return authentication response
+
+New access token + new refresh token on success
+
+
+6. Final compilation and testing results
+Final Maven build
+BUILD SUCCESS
+
+27
+Tests
+0
+Failures
+0
+Errors
+0
+Skipped
+
+
+Command: ./mvnw clean test
+
+Build duration: 25.688 seconds
+
+Compiled: 36 main source files and 9 test source files
+
+Test coverage summary
+Test class	Tests	Result
+AuthControllerTest	2	Passed
+AuthenticationServiceTest	6	Passed
+AuthRefreshEndpointIntegrationTest	3	Passed
+RefreshTokenConcurrencyIntegrationTest	1	Passed
+RefreshTokenIntegrationTest	2	Passed
+RefreshTokenReuseIntegrationTest	1	Passed
+RefreshTokenServiceTest	9	Passed
+PropertyCoreApplicationTests	1	Passed
+UserRegistrationRequestTest	2	Passed
+Total	27	All passed
+
+The concurrency integration test confirmed that, in the tested execution, exactly one of two simultaneous rotations succeeded and reuse detection invalidated the replacement token.
+
+Flyway successfully validated both migrations. The Maven repository authentication and Mockito agent warnings did not prevent compilation or testing.
+7. Security considerations
+The implementation includes several important safeguards:
+- Cryptographically secure refresh-token generation using SecureRandom.
+- SHA-256 hashing before token persistence.
+- Refresh-token expiration and revocation checks.
+- Token-family revocation following reuse detection.
+- Transactional database locking to coordinate concurrent rotation requests.
+- Preservation of family revocations when an authentication exception is thrown.
+Limitations: Automated test success does not prove the absence of all security vulnerabilities. Additional production-hardening work may include repeated concurrency stress testing, token revocation on logout, monitoring, rate limiting, and operational security controls. These are not blockers for the agreed Task 6 scope.
+
+9. Final conclusion
+Refresh Token Rotation has been successfully completed and verified for the current project milestone. The final build passed all 27 automated tests without failures or errors.

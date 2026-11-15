@@ -1,12 +1,14 @@
+
 package com.propertysaas.propertycore.auth.controller;
 
 import com.propertysaas.propertycore.auth.dto.LoginRequest;
 import com.propertysaas.propertycore.auth.dto.LoginResponse;
+import com.propertysaas.propertycore.auth.dto.RefreshTokenRequest;
+import com.propertysaas.propertycore.auth.dto.RefreshTokenResponse;
 import com.propertysaas.propertycore.auth.service.AuthenticationService;
 
 import jakarta.validation.Valid;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -27,8 +29,17 @@ public class AuthController {
     public ResponseEntity<LoginResponse> login(
             @Valid @RequestBody LoginRequest request
     ) {
-        return ResponseEntity
-                .status(HttpStatus.OK)
-                .body(authenticationService.login(request));
+        return ResponseEntity.ok(
+                authenticationService.login(request)
+        );
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<RefreshTokenResponse> refresh(
+            @Valid @RequestBody RefreshTokenRequest request
+    ) {
+        return ResponseEntity.ok(
+                authenticationService.refresh(request)
+        );
     }
 }
