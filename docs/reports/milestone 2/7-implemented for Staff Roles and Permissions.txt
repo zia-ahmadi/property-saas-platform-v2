@@ -1,0 +1,16 @@
+What we implemented for Staff Roles and Permissions
+1. Four membership roles: OWNER, ADMIN, MANAGER, and STAFF.
+2. Permission definitions: Organization, membership, property, lease, billing, and maintenance permissions.
+3. RolePermissionMapping: Defines which permissions each role receives.
+4. OrganizationAuthorizationService: Validates organization membership, status, and permissions.
+5. CurrentUserAuthorizationService: Connects the authenticated user to organization-level authorization.
+6. Tenant isolation: Prevents users from accessing organizations they do not belong to.
+Our final verification was:
+Tests run: 62, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS
+
+
+One important distinction
+The role and permission infrastructure is complete, but we have not yet implemented the full staff-management APIs for inviting employees, changing roles, listing staff, or suspending memberships.
+
+Those are additional business features, not necessarily blockers for the milestone as you defined it.
