@@ -1,0 +1,50 @@
+Milestone 4 — Task 2: List Properties with Pagination
+Task 2 completed successfully!
+
+Your latest Maven output confirms that both integration test classes passed.
+Tests passed
+13/13
+
+Failures / errors
+0
+
+Build
+SUCCESS
+
+
+
+Task 2 — Completion report
+Implemented features:
+- Tenant-scoped property listing.
+- Pagination with default page 0 and size 10.
+- Maximum page size of 100.
+- Deterministic sorting by creation date and property ID.
+- Stable, reusable PageResponse<T> DTO.
+- Authentication and organization isolation.
+- Read access for authorized STAFF members.
+- Validation of pagination parameters.
+Integration testing:
+Test class	Passed
+PropertyEndpointIntegrationTest	6
+PropertyListEndpointIntegrationTest	7
+Total	13
+
+The previous PageImpl serialization warning is also absent from your latest output. The remaining Maven repository and Mockito warnings did not prevent the build.
+Milestone 4 — Progress
+2 of 6 tasks completed
+
+33%
+
+
+
+Create property
+
+List properties with pagination
+
+Retrieve property details
+
+Update property
+
+Archive property
+
+Property ownership and validation
