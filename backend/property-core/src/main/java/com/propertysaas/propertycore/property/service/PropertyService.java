@@ -19,6 +19,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
+
 import java.util.UUID;
 
 @Service
@@ -139,4 +142,27 @@ public class PropertyService {
                 property.getUpdatedAt()
         );
     }
+    // ---------------------------------------------------------
+// Retrieve Property Details
+// ---------------------------------------------------------
+
+@Transactional(readOnly = true)
+public PropertyResponse getProperty(
+        UUID organizationId,
+        UUID propertyId
+) {
+    // Verify that the authenticated user has access
+    // to the requested organization.
+    contextResolver.resolve(organizationId);
+
+    // Retrieve only a property belonging to this organization.
+    Property property = propertyRepository
+            .findByIdAndOrganizationId(propertyId, organizationId)
+            .orElseThrow(() -> new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Property not found"
+            ));
+
+    return toPropertyResponse(property);
+}
 }

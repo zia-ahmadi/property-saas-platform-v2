@@ -85,4 +85,20 @@ public class PropertyController {
 
         return ResponseEntity.ok(PageResponse.from(properties));
     }
+    // ---------------------------------------------------------
+// Retrieve Property Details
+// ---------------------------------------------------------
+
+@GetMapping("/{propertyId}")
+public ResponseEntity<PropertyResponse> getProperty(
+        @PathVariable UUID organizationId,
+        @PathVariable UUID propertyId
+) {
+    PropertyResponse response = propertyService.getProperty(
+            organizationId,
+            propertyId
+    );
+
+    return ResponseEntity.ok(response);
+}
 }

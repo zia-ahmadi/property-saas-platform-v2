@@ -1,0 +1,156 @@
+Completion Report — Retrieve Property Details
+Multi-Tenant Property Leasing, Billing, and Maintenance SaaS
+Field	Details
+Milestone	4 — Property Management
+Task	3 — Retrieve Property Details
+Completion date	November 16, 2026
+Backend	Spring Boot 4.1.1 / Java 21
+Database	PostgreSQL 15
+Status	Completed and verified
+Full test suite	100 passed, 0 failures, 0 errors
+
+1. Objective
+The objective of this task was to implement a secure REST API endpoint that allows authenticated organization members to retrieve the complete details of an individual property.
+
+The implementation needed to support multi-tenant isolation, enforce organization membership, return the existing standardized property response, and handle invalid or unauthorized requests appropriately.
+2. Implemented REST API
+Endpoint
+GET /api/v1/organizations/{organizationId}/properties/{propertyId}
+Authorization: Bearer <access_token>
+
+
+Successful response: 200 OK
+
+Example response structure:
+{
+  "id": "property-uuid",
+  "organizationId": "organization-uuid",
+  "name": "Kabul Test Property",
+  "propertyType": "APARTMENT",
+  "addressLine1": "Street 3",
+  "addressLine2": null,
+  "city": "Kabul",
+  "countryCode": "AF",
+  "status": "ACTIVE",
+  "createdAt": "2026-11-16T15:00:00Z",
+  "updatedAt": "2026-11-16T15:00:00Z"
+}
+
+
+The example above illustrates the response structure; the UUIDs and timestamps are placeholders.3. Implementation Details
+3.1 Controller layer
+File: property/controller/PropertyController.java
+
+Added the getProperty() endpoint handler using @GetMapping("/{propertyId}").
+
+Responsibilities include accepting organization and property identifiers, delegating to the service layer, and returning the retrieved PropertyResponse with HTTP 200.
+3.2 Service layer
+File: property/service/PropertyService.java
+
+Implemented:
+@Transactional(readOnly = true)
+public PropertyResponse getProperty(
+        UUID organizationId,
+        UUID propertyId
+) {
+    contextResolver.resolve(organizationId);
+
+    Property property = propertyRepository
+            .findByIdAndOrganizationId(propertyId, organizationId)
+            .orElseThrow(() -> new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Property not found"
+            ));
+
+    return toPropertyResponse(property);
+}
+
+
+The service first validates the authenticated organization's context, then retrieves the property using both its ID and organization ID.
+
+The operation is read-only and reuses the existing DTO mapping.
+3.3 Repository layer
+File: property/repository/PropertyRepository.java
+
+Reused the existing method:
+Optional<Property> findByIdAndOrganizationId(
+        UUID propertyId,
+        UUID organizationId
+);
+
+
+No repository changes or database migrations were required.
+3.4 Global exception handling
+File: common/exception/GlobalExceptionHandler.java
+
+Added handling for MethodArgumentTypeMismatchException.
+
+This resolved an issue in which malformed UUID path parameters produced HTTP 500 rather than HTTP 400.
+
+The change preserves the application's standardized ErrorResponse format.
+4. Security and Tenant Isolation
+The endpoint uses the existing JWT authentication and organization-context resolution infrastructure.
+Scenario	HTTP status
+Authorized organization member retrieves an existing property	200 OK
+Property does not exist	404 Not Found
+Property belongs to another tenant, but the requested organization is accessible	404 Not Found
+User lacks access to the requested organization	403 Forbidden
+JWT is missing	401 Unauthorized
+Property ID is malformed	400 Bad Request
+
+The organization context is validated before the property lookup, and the repository query is tenant-scoped.
+
+This prevents an authenticated member of one organization from retrieving another organization's property through the API.
+
+Both OWNER and STAFF roles were verified to have read access.
+5. Integration Testing
+New file:
+
+src/test/java/com/propertysaas/propertycore/property/controller/PropertyDetailsEndpointIntegrationTest.java
+
+Seven integration tests were implemented.
+#	Test	Result
+1	requestWithoutJwtShouldReturn401	Passed
+2	ownerShouldRetrievePropertyDetails	Passed
+3	staffShouldRetrievePropertyDetails	Passed
+4	missingPropertyShouldReturn404	Passed
+5	propertyFromAnotherTenantShouldReturn404	Passed
+6	unauthorizedOrganizationShouldReturn403	Passed
+7	malformedPropertyIdShouldReturn400	Passed
+
+Testing used JUnit 5, Spring Boot Test, MockMvc, signed JWTs, and PostgreSQL-backed fixtures with transactional setup and cleanup.
+Targeted test execution
+./mvnw -Dtest=PropertyDetailsEndpointIntegrationTest test
+
+
+Result: 7 tests passed, 0 failures, 0 errors.
+Full regression test execution
+./mvnw clean test
+
+
+BUILD SUCCESS
+
+Tests executed
+100
+
+Failures / Errors / Skipped
+0 / 0 / 0
+
+
+Total build time: 38.386 seconds
+
+The full test suite confirmed that the new endpoint and exception-handling changes did not introduce detected regressions in the existing authentication, authorization, organization, or property functionality.
+6. Files Changed
+File	Change
+PropertyController.java	Added GET property-details endpoint
+PropertyService.java	Added tenant-scoped retrieval method
+GlobalExceptionHandler.java	Added invalid parameter-type handling
+PropertyDetailsEndpointIntegrationTest.java	Created seven integration tests
+
+The existing PropertyRepository.java, PropertyResponse.java, database schema, and Flyway migrations remained unchanged.
+7. Final Outcome
+Milestone 4 — Task 3: Retrieve Property Details is complete.
+
+The backend now supports secure retrieval of individual property records, enforces organization-level access controls, prevents cross-tenant property disclosure, and returns appropriate HTTP responses for the tested error conditions.
+
+All seven new integration tests and the complete suite of 100 tests passed.

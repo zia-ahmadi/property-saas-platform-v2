@@ -16,6 +16,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+
 import java.time.Instant;
 import java.util.stream.Collectors;
 
@@ -147,6 +149,26 @@ public ResponseEntity<ErrorResponse> handleBadRequestException(
     }
 
    
+    // Handle invalid path variables and request parameter types (HTTP 400)
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatchException(
+            MethodArgumentTypeMismatchException exception,
+            HttpServletRequest request
+    ) {
+        ErrorResponse errorResponse = new ErrorResponse(
+                Instant.now(),
+                HttpStatus.BAD_REQUEST.value(),
+                HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                "Invalid value for parameter: " + exception.getName(),
+                request.getRequestURI()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(errorResponse);
+    }
+
+
     // Handle unexpected exceptions (HTTP 500)
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGlobalException(
