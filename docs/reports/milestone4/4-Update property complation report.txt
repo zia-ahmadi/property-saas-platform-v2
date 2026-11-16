@@ -1,0 +1,96 @@
+Milestone 4 — Task 4 Completion Report
+Property Management: Update Property | November 16, 2026
+Status: Completed — Full Regression Passed
+
+Your latest ./mvnw clean test output confirms that the entire backend test suite passed, not just the property update tests.
+Total tests
+120
+
+Passed
+120
+
+Failures / errors
+0
+
+
+
+59 production Java source files and 24 test source files compiled successfully. All three Flyway migrations were validated against PostgreSQL 15.19.
+
+1. Objective
+Implement a secure, tenant-isolated property update API for the Multi-Tenant Property Leasing, Billing, and Maintenance SaaS.
+
+The feature allows authorized organization members to modify selected property attributes while preserving ownership, identity, and other protected fields.
+2. Implemented API
+Endpoint
+PATCH /api/v1/organizations/{organizationId}/properties/{propertyId}
+Authorization: Bearer <access_token>
+Content-Type: application/json
+
+
+Example request:
+{
+  "name": "Updated Kabul Property",
+  "city": "Herat",
+  "addressLine2": null
+}
+
+
+Successful response: 200 OK, returning the updated PropertyResponse.
+
+The implementation uses partial-update semantics: omitted fields remain unchanged, while an explicit JSON null clears the optional addressLine2 field.
+3. Implementation Summary
+Component	Responsibility
+PropertyController	Exposes the PATCH endpoint
+UpdatePropertyRequest	Encapsulates the JSON update payload
+UpdatePropertyRequestValidator	Validates allowed fields, types, lengths, and values
+PropertyService	Enforces tenant context and permissions, loads and updates the property
+Property entity	Applies validated field changes
+PropertyRepository	Retrieves properties using both property ID and organization ID
+GlobalExceptionHandler	Provides standardized error responses
+
+The implementation also introduced Jackson 3 databind support.
+4. Business Rules and Security
+The update API enforces the following requirements:
+- Tenant isolation: A property is retrieved using its ID and the authenticated organization's ID.
+- Authorization: Updating requires the PROPERTY_MANAGE permission.
+- Field restrictions: Only approved property attributes may be modified.
+- Ownership protection: Clients cannot change organizationId.
+- Validation: Empty updates, unsupported fields, and invalid values are rejected.
+- Persistence: Valid changes are committed through the transactional service.
+The permitted update fields are name, propertyType, addressLine1, addressLine2, city, and countryCode.
+
+Property IDs, organization ownership, status, and audit timestamps are not directly editable through this endpoint.
+5. Testing and Verification
+The dedicated PropertyUpdateEndpointIntegrationTest completed 20 tests with zero failures.
+
+The complete regression suite also passed:
+Test group	Tests passed
+Property update integration	20
+Other property controllers and property service	23
+Authentication and refresh-token functionality	24
+Organization, membership, permissions, and tenant context	48
+Common exception handling and application tests	3
+User registration validation	2
+Total	120
+
+These results demonstrate that the property update implementation passes its integration tests and has not caused failures in the existing automated backend suite.
+
+The non-blocking Maven repository metadata warnings and Mockito agent warnings remain visible, but they did not prevent compilation or testing.
+6. Completion Criteria
+Acceptance criterion	Result
+Authenticated property update endpoint	Passed
+Partial updates preserve omitted fields	Passed
+Explicit null handling	Passed
+Input validation	Passed
+Property ownership protection	Passed
+Role-based authorization	Passed
+Cross-tenant isolation	Passed
+PostgreSQL persistence	Passed
+Full backend regression testing	Passed
+
+7. Final Assessment
+Milestone 4, Task 4 — Update Property is complete and verified.
+
+The implementation satisfies the defined functional and security requirements, and the complete backend test suite passes.
+
+This confirms completion of the backend task within the current tested scope. It does not yet constitute production deployment approval or completion of the frontend and API contract deliverables.

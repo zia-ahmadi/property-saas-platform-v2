@@ -20,6 +20,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.propertysaas.propertycore.property.dto.UpdatePropertyRequest;
+import org.springframework.web.bind.annotation.PatchMapping;
+import tools.jackson.databind.JsonNode;
+
 import java.net.URI;
 import java.util.UUID;
 
@@ -101,4 +105,27 @@ public ResponseEntity<PropertyResponse> getProperty(
 
     return ResponseEntity.ok(response);
 }
+
+    // ---------------------------------------------------------
+    // Update Property (Partial Update)
+    // ---------------------------------------------------------
+
+    @PatchMapping("/{propertyId}")
+    public ResponseEntity<PropertyResponse> updateProperty(
+            @PathVariable UUID organizationId,
+            @PathVariable UUID propertyId,
+            @RequestBody JsonNode changes
+    ) {
+        UpdatePropertyRequest request =
+                new UpdatePropertyRequest(changes);
+
+        PropertyResponse response = propertyService.updateProperty(
+                organizationId,
+                propertyId,
+                request
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
 }

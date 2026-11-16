@@ -9,17 +9,19 @@ import com.propertysaas.propertycore.organization.repository.OrganizationReposit
 
 import com.propertysaas.propertycore.property.dto.CreatePropertyRequest;
 import com.propertysaas.propertycore.property.dto.PropertyResponse;
+import com.propertysaas.propertycore.property.dto.UpdatePropertyRequest;
 import com.propertysaas.propertycore.property.entity.Property;
 import com.propertysaas.propertycore.property.repository.PropertyRepository;
+import com.propertysaas.propertycore.property.validation.UpdatePropertyRequestValidator;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.UUID;
@@ -31,17 +33,20 @@ public class PropertyService {
     private final OrganizationRepository organizationRepository;
     private final AuthenticatedOrganizationContextResolver contextResolver;
     private final CurrentUserAuthorizationService authorizationService;
+    private final UpdatePropertyRequestValidator updatePropertyRequestValidator;
 
     public PropertyService(
             PropertyRepository propertyRepository,
             OrganizationRepository organizationRepository,
             AuthenticatedOrganizationContextResolver contextResolver,
-            CurrentUserAuthorizationService authorizationService
+            CurrentUserAuthorizationService authorizationService,
+            UpdatePropertyRequestValidator updatePropertyRequestValidator
     ) {
         this.propertyRepository = propertyRepository;
         this.organizationRepository = organizationRepository;
         this.contextResolver = contextResolver;
         this.authorizationService = authorizationService;
+        this.updatePropertyRequestValidator = updatePropertyRequestValidator;
     }
 
     // ---------------------------------------------------------
@@ -91,18 +96,14 @@ public class PropertyService {
             int page,
             int size
     ) {
-        // Verify authenticated organization membership.
         contextResolver.resolve(organizationId);
 
-        // Prevent invalid or excessively large page requests.
         if (page < 0 || size < 1 || size > 100) {
             throw new IllegalArgumentException(
                     "Page must be >= 0 and size must be between 1 and 100"
             );
         }
 
-        // Stable ordering prevents inconsistent page results
-        // when multiple properties share the same creation time.
         Pageable pageable = PageRequest.of(
                 page,
                 size,
@@ -112,7 +113,6 @@ public class PropertyService {
                 )
         );
 
-        // Filter by tenant directly in the database.
         Page<Property> properties =
                 propertyRepository.findAllByOrganizationId(
                         organizationId,
@@ -123,11 +123,64 @@ public class PropertyService {
     }
 
     // ---------------------------------------------------------
+    // Retrieve Property Details
+    // ---------------------------------------------------------
+
+    @Transactional(readOnly = true)
+    public PropertyResponse getProperty(
+            UUID organizationId,
+            UUID propertyId
+    ) {
+        contextResolver.resolve(organizationId);
+
+        Property property = propertyRepository
+                .findByIdAndOrganizationId(propertyId, organizationId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Property not found"
+                ));
+
+        return toPropertyResponse(property);
+    }
+
+    // ---------------------------------------------------------
+    // Update Property
+    // ---------------------------------------------------------
+
+    @Transactional
+    public PropertyResponse updateProperty(
+            UUID organizationId,
+            UUID propertyId,
+            UpdatePropertyRequest request
+    ) {
+        contextResolver.resolve(organizationId);
+
+        authorizationService.requirePermission(
+                organizationId,
+                OrganizationPermission.PROPERTY_MANAGE
+        );
+
+        updatePropertyRequestValidator.validate(request);
+
+        Property property = propertyRepository
+                .findByIdAndOrganizationId(propertyId, organizationId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Property not found"
+                ));
+
+        property.applyUpdates(request.changes());
+
+        propertyRepository.flush();
+
+        return toPropertyResponse(property);
+    }
+
+    // ---------------------------------------------------------
     // Shared Response Mapper
     // ---------------------------------------------------------
 
     private PropertyResponse toPropertyResponse(Property property) {
-
         return new PropertyResponse(
                 property.getId(),
                 property.getOrganization().getId(),
@@ -142,27 +195,4 @@ public class PropertyService {
                 property.getUpdatedAt()
         );
     }
-    // ---------------------------------------------------------
-// Retrieve Property Details
-// ---------------------------------------------------------
-
-@Transactional(readOnly = true)
-public PropertyResponse getProperty(
-        UUID organizationId,
-        UUID propertyId
-) {
-    // Verify that the authenticated user has access
-    // to the requested organization.
-    contextResolver.resolve(organizationId);
-
-    // Retrieve only a property belonging to this organization.
-    Property property = propertyRepository
-            .findByIdAndOrganizationId(propertyId, organizationId)
-            .orElseThrow(() -> new ResponseStatusException(
-                    HttpStatus.NOT_FOUND,
-                    "Property not found"
-            ));
-
-    return toPropertyResponse(property);
-}
 }

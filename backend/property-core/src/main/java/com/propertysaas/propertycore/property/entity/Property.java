@@ -14,6 +14,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import tools.jackson.databind.JsonNode;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -135,4 +136,40 @@ public class Property {
     public Instant getUpdatedAt() {
         return updatedAt;
     }
+
+public void applyUpdates(JsonNode changes) {
+
+    if (changes.has("name")) {
+        this.name = changes.get("name").stringValue();
+    }
+
+    if (changes.has("propertyType")) {
+        this.propertyType = PropertyType.valueOf(
+                changes.get("propertyType").stringValue()
+        );
+    }
+
+    if (changes.has("addressLine1")) {
+        this.addressLine1 =
+                changes.get("addressLine1").stringValue();
+    }
+
+    if (changes.has("addressLine2")) {
+        JsonNode value = changes.get("addressLine2");
+
+        this.addressLine2 = value.isNull()
+                ? null
+                : value.stringValue();
+    }
+
+    if (changes.has("city")) {
+        this.city = changes.get("city").stringValue();
+    }
+
+    if (changes.has("countryCode")) {
+        this.countryCode =
+                changes.get("countryCode").stringValue();
+    }
+}
+
 }

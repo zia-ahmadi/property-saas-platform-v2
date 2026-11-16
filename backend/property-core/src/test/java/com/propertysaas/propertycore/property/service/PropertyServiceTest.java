@@ -21,6 +21,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import com.propertysaas.propertycore.property.validation.UpdatePropertyRequestValidator;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -41,12 +42,15 @@ class PropertyServiceTest {
 
     @Mock
     private AuthenticatedOrganizationContextResolver contextResolver;
+    
+@Mock
+private CurrentUserAuthorizationService authorizationService;
 
-    @Mock
-    private CurrentUserAuthorizationService authorizationService;
+@Mock
+private UpdatePropertyRequestValidator updatePropertyRequestValidator;
 
-    @InjectMocks
-    private PropertyService propertyService;
+@InjectMocks
+private PropertyService propertyService;
 
     private UUID organizationId;
     private Organization organization;
