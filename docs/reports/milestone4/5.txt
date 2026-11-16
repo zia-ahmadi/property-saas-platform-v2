@@ -1,0 +1,162 @@
+Milestone 4 — Task 5 Completion Report
+Multi-Tenant Property Leasing, Billing, and Maintenance SaaS
+Completed & Tested
+November 16, 2026
+
+1. Executive Summary
+Task: Archive Property
+
+Milestone: 4 — Property Management
+
+Backend service: property-core
+
+Final status: Successfully implemented and verified.
+
+The Archive Property feature enables authorized organization members to archive existing properties without permanently deleting their records.
+
+The implementation follows the application's multi-tenant architecture, using organization-scoped property retrieval, role-based authorization, transactional persistence, and an idempotent archive operation.
+
+The feature was verified through 12 dedicated integration tests and a complete regression test suite containing 132 tests.
+2. Technology Stack
+Technology	Version / Purpose
+Java	21
+Spring Boot	4.1.1
+Spring Security	JWT authentication and authorization
+Spring Data JPA	Property persistence
+Hibernate ORM	7.4.5.Final
+PostgreSQL	15.19
+Flyway	Database migration management
+JUnit / MockMvc	Integration testing
+Maven	Build and test execution
+
+3. Functional Implementation
+3.1 Property Entity
+File: property/entity/Property.java
+
+Implemented the archive() method to transition a property's status from ACTIVE to ARCHIVED.
+
+The method is idempotent: archiving an already archived property leaves its status unchanged.
+
+The property record, its organization relationship, and its existing details are retained.
+3.2 Property Service
+File: property/service/PropertyService.java
+
+Implemented archiveProperty(UUID organizationId, UUID propertyId).
+
+The service performs authenticated organization context resolution, verifies the PROPERTY_MANAGE permission, retrieves the property using both its ID and organization ID, invokes the entity's archive operation, and flushes the change to the database.
+
+The operation is transactional and returns the updated property response.
+3.3 REST Controller
+File: property/controller/PropertyController.java
+
+Implemented the following endpoint:
+PATCH /api/v1/organizations/{organizationId}/properties/{propertyId}/archive
+
+
+A successful request returns HTTP 200 OK and a PropertyResponse containing the property's ARCHIVED status.
+
+The endpoint does not require a request body.
+4. Security and Tenant Isolation
+The archive operation applies two authorization boundaries.
+
+First, the authenticated organization context is resolved and the user's PROPERTY_MANAGE permission is checked.
+
+Second, the property is retrieved using an organization-scoped repository query:
+findByIdAndOrganizationId(propertyId, organizationId)
+
+
+This prevents an authorized user in one organization from archiving a property belonging to another organization.
+
+A property that does not exist within the requested organization produces HTTP 404 Not Found.
+5. Database Implementation
+The existing properties table already supports the archive lifecycle.
+
+The status column permits the values active and archived, and PropertyStatusConverter handles conversion between Java enum values and database values.
+
+No new Flyway migration was required.
+
+The database schema remains at version 3, with all three migrations successfully validated during testing.
+
+Archiving does not delete a property or modify its ownership relationship.
+6. Testing and Verification
+Dedicated integration testing
+Executed:
+./mvnw -Dtest=PropertyArchiveEndpointIntegrationTest test
+
+
+Archive integration test results
+Passed
+
+12
+Tests
+
+0
+Failures
+
+0
+Errors
+
+0
+Skipped
+
+
+
+The dedicated test suite covers the archive operation, persisted status, repeated requests, preservation of property details, retrieval after archiving, authorization, authentication, nonexistent resources, and tenant isolation.
+Full regression testing
+Executed:
+./mvnw clean test
+
+
+Complete backend test results
+BUILD SUCCESS
+
+132
+Tests
+
+0
+Failures
+
+0
+Errors
+
+0
+Skipped
+
+
+Execution time: 37.787 seconds
+The regression suite passed across authentication, refresh-token handling, organization management, authorization, tenant context, property creation, pagination, property details, updates, and archiving.
+
+The build compiled 59 production source files and 25 test source files.
+7. Existing Feature Compatibility
+The implementation preserves all previously developed Property Management functionality.
+Feature	Result
+Create property	Regression tests passed
+List properties with pagination	Regression tests passed
+Retrieve property details	Regression tests passed
+Update property	Regression tests passed
+Archive property	Integration tests passed
+Tenant isolation	Regression tests passed
+
+Archived properties remain retrievable and are included in the existing property listing because no status filter has been introduced.
+
+The current update operation also permits changes to archived properties. Additional lifecycle restrictions may be introduced as a separate business rule.
+8. Technical Notes
+The Maven build reported HTTP 401 warnings while accessing two external metadata repositories. Mockito also reported warnings about dynamically attaching a Java agent.
+
+Neither warning prevented compilation or test execution.
+
+These warnings are non-blocking for this milestone, although Maven repository configuration and Mockito agent configuration may be improved during future maintenance.
+9. Final Acceptance
+Acceptance criterion	Status
+Archive endpoint implemented	Passed
+Soft archive supported	Passed
+Idempotent operation	Passed
+JWT-protected endpoint	Passed
+Permission-based authorization	Passed
+Tenant-scoped property access	Passed
+Database status persistence	Passed
+Dedicated integration tests	Passed
+Full regression tests	Passed
+Existing functionality preserved	Passed
+
+Final conclusion: Milestone 4, Task 5 — Archive Property has been successfully implemented and verified. All 132 backend tests pass with zero failures and zero errors.

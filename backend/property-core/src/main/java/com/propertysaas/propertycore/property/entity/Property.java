@@ -1,4 +1,3 @@
-
 package com.propertysaas.propertycore.property.entity;
 
 import com.propertysaas.propertycore.organization.entity.Organization;
@@ -171,5 +170,12 @@ public void applyUpdates(JsonNode changes) {
                 changes.get("countryCode").stringValue();
     }
 }
+
+    /** Archive the property without deleting it. Repeated calls are no-ops. */
+    public void archive() {
+        if (this.status != PropertyStatus.ARCHIVED) {
+            this.status = PropertyStatus.ARCHIVED;
+        }
+    }
 
 }

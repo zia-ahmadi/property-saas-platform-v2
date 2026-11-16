@@ -1,4 +1,3 @@
-
 package com.propertysaas.propertycore.property.controller;
 
 import com.propertysaas.propertycore.common.response.PageResponse;
@@ -126,6 +125,20 @@ public ResponseEntity<PropertyResponse> getProperty(
         );
 
         return ResponseEntity.ok(response);
+    }
+
+    // ---------------------------------------------------------
+    // Archive Property
+    // ---------------------------------------------------------
+
+    @PatchMapping("/{propertyId}/archive")
+    public ResponseEntity<PropertyResponse> archiveProperty(
+            @PathVariable UUID organizationId,
+            @PathVariable UUID propertyId
+    ) {
+        return ResponseEntity.ok(
+                propertyService.archiveProperty(organizationId, propertyId)
+        );
     }
 
 }

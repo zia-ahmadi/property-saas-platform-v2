@@ -177,6 +177,42 @@ public class PropertyService {
     }
 
     // ---------------------------------------------------------
+    // Archive Property
+    // ---------------------------------------------------------
+
+    @Transactional
+    public PropertyResponse archiveProperty(
+            UUID organizationId,
+            UUID propertyId
+    ) {
+        // Validate authenticated organization membership.
+        contextResolver.resolve(organizationId);
+
+        // Only users with PROPERTY_MANAGE permission may archive.
+        authorizationService.requirePermission(
+                organizationId,
+                OrganizationPermission.PROPERTY_MANAGE
+        );
+
+        // Prevent access to properties belonging to other tenants.
+        Property property = propertyRepository
+                .findByIdAndOrganizationId(propertyId, organizationId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Property not found"
+                ));
+
+        // ACTIVE -> ARCHIVED.
+        // Repeated requests remain successful.
+        property.archive();
+
+        // Synchronize the status change with PostgreSQL.
+        propertyRepository.flush();
+
+        return toPropertyResponse(property);
+    }
+
+    // ---------------------------------------------------------
     // Shared Response Mapper
     // ---------------------------------------------------------
 
