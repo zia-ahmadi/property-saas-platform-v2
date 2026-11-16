@@ -7,10 +7,12 @@ import com.propertysaas.propertycore.organization.permission.OrganizationPermiss
 import com.propertysaas.propertycore.organization.permission.service.CurrentUserAuthorizationService;
 import com.propertysaas.propertycore.organization.repository.OrganizationRepository;
 
+import com.propertysaas.propertycore.organization.context.AuthenticatedOrganizationContextResolver;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -33,6 +35,9 @@ class OrganizationServiceTest {
     @Mock
     private CurrentUserAuthorizationService authorizationService;
 
+    @Mock
+private AuthenticatedOrganizationContextResolver contextResolver;
+
     private OrganizationService organizationService;
 
     private UUID organizationId;
@@ -41,7 +46,8 @@ class OrganizationServiceTest {
     void setUp() {
         organizationService = new OrganizationService(
                 organizationRepository,
-                authorizationService
+                authorizationService,
+                contextResolver
         );
 
         organizationId = UUID.randomUUID();
@@ -79,6 +85,22 @@ class OrganizationServiceTest {
         );
 
         verify(organizationRepository).findById(organizationId);
+
+InOrder inOrder = inOrder(
+        contextResolver,
+        authorizationService,
+        organizationRepository
+);
+
+inOrder.verify(contextResolver).resolve(organizationId);
+
+inOrder.verify(authorizationService).requirePermission(
+        organizationId,
+        OrganizationPermission.ORGANIZATION_VIEW
+);
+
+inOrder.verify(organizationRepository).findById(organizationId);
+
     }
 
     @Test
@@ -115,4 +137,30 @@ class OrganizationServiceTest {
                 exception.getStatusCode()
         );
     }
+
+
+@Test
+void invalidOrganizationContextShouldPreventDataAccess() {
+
+    doThrow(new AccessDeniedException(
+            "Access to this organization is denied"
+    ))
+            .when(contextResolver)
+            .resolve(organizationId);
+
+    assertThrows(
+            AccessDeniedException.class,
+            () -> organizationService.getOrganization(organizationId)
+    );
+
+    // Authorization and data access must not happen
+    // when organization context resolution fails.
+    verifyNoInteractions(
+            authorizationService,
+            organizationRepository
+    );
+
+    verify(contextResolver).resolve(organizationId);
+}
+
 }

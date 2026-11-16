@@ -422,5 +422,306 @@ void getOrganizationWithExpiredJwtShouldReturn401()
     .andExpect(status().isUnauthorized());
 }
 
+@Test
+void userWithTwoMembershipsShouldAccessBothOrganizations()
+        throws Exception {
+
+    String uniqueId = UUID.randomUUID().toString();
+    UUID[] ids = new UUID[5];
+
+    try {
+        transactionTemplate.executeWithoutResult(status -> {
+            Organization organizationA = organizationRepository.save(
+                    new Organization(
+                            "Organization A",
+                            "multi-org-a-" + uniqueId
+                    )
+            );
+
+            Organization organizationB = organizationRepository.save(
+                    new Organization(
+                            "Organization B",
+                            "multi-org-b-" + uniqueId
+                    )
+            );
+
+            User user = userRepository.save(
+                    new User(
+                            "multi-org-" + uniqueId + "@example.com",
+                            "test-password-hash",
+                            "Multi",
+                            "Member"
+                    )
+            );
+
+            OrganizationMembership membershipA =
+                    membershipRepository.save(
+                            new OrganizationMembership(
+                                    organizationA,
+                                    user,
+                                    MembershipRole.OWNER
+                            )
+                    );
+
+            OrganizationMembership membershipB =
+                    membershipRepository.save(
+                            new OrganizationMembership(
+                                    organizationB,
+                                    user,
+                                    MembershipRole.STAFF
+                            )
+                    );
+
+            ids[0] = organizationA.getId();
+            ids[1] = organizationB.getId();
+            ids[2] = user.getId();
+            ids[3] = membershipA.getId();
+            ids[4] = membershipB.getId();
+        });
+
+        Instant now = Instant.now();
+
+        JwtClaimsSet claims = JwtClaimsSet.builder()
+                .issuer(issuer)
+                .issuedAt(now)
+                .expiresAt(now.plusSeconds(3600))
+                .subject(ids[2].toString())
+                .id(UUID.randomUUID().toString())
+                .build();
+
+        String accessToken = jwtEncoder.encode(
+                JwtEncoderParameters.from(
+                        JwsHeader.with(MacAlgorithm.HS256).build(),
+                        claims
+                )
+        ).getTokenValue();
+
+        // OWNER can access Organization A.
+        mockMvc.perform(
+                get("/api/v1/organizations/{organizationId}", ids[0])
+                        .header("Authorization", "Bearer " + accessToken)
+        )
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(ids[0].toString()));
+
+        // STAFF can also view Organization B.
+        mockMvc.perform(
+                get("/api/v1/organizations/{organizationId}", ids[1])
+                        .header("Authorization", "Bearer " + accessToken)
+        )
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(ids[1].toString()));
+
+    } finally {
+        transactionTemplate.executeWithoutResult(status -> {
+            if (ids[3] != null) {
+                membershipRepository.deleteById(ids[3]);
+            }
+
+            if (ids[4] != null) {
+                membershipRepository.deleteById(ids[4]);
+            }
+
+            if (ids[2] != null) {
+                userRepository.deleteById(ids[2]);
+            }
+
+            if (ids[0] != null) {
+                organizationRepository.deleteById(ids[0]);
+            }
+
+            if (ids[1] != null) {
+                organizationRepository.deleteById(ids[1]);
+            }
+        });
+    }
+}
+
+@Test
+void suspendedUserWithValidJwtShouldReturn403()
+        throws Exception {
+
+    String uniqueId = UUID.randomUUID().toString();
+    UUID[] ids = new UUID[3];
+
+    try {
+        transactionTemplate.executeWithoutResult(status -> {
+
+            Organization organization = organizationRepository.save(
+                    new Organization(
+                            "Suspended User Organization",
+                            "suspended-user-" + uniqueId
+                    )
+            );
+
+            User user = userRepository.save(
+                    new User(
+                            "suspended-user-" + uniqueId + "@example.com",
+                            "test-password-hash",
+                            "Suspended",
+                            "User"
+                    )
+            );
+
+            OrganizationMembership membership =
+                    membershipRepository.save(
+                            new OrganizationMembership(
+                                    organization,
+                                    user,
+                                    MembershipRole.OWNER
+                            )
+                    );
+
+            ids[0] = organization.getId();
+            ids[1] = user.getId();
+            ids[2] = membership.getId();
+        });
+
+        // Generate JWT while the user is active.
+        Instant now = Instant.now();
+
+        JwtClaimsSet claims = JwtClaimsSet.builder()
+                .issuer(issuer)
+                .issuedAt(now)
+                .expiresAt(now.plusSeconds(3600))
+                .subject(ids[1].toString())
+                .id(UUID.randomUUID().toString())
+                .build();
+
+        String accessToken = jwtEncoder.encode(
+                JwtEncoderParameters.from(
+                        JwsHeader.with(MacAlgorithm.HS256).build(),
+                        claims
+                )
+        ).getTokenValue();
+
+        // Suspend the user after JWT issuance.
+        jdbcTemplate.update(
+                """
+                UPDATE users
+                SET status = 'suspended'
+                WHERE id = ?
+                """,
+                ids[1]
+        );
+
+        // The valid JWT must not bypass account suspension.
+        mockMvc.perform(
+                get("/api/v1/organizations/{organizationId}", ids[0])
+                        .header("Authorization", "Bearer " + accessToken)
+        )
+        .andExpect(status().isForbidden());
+
+    } finally {
+        transactionTemplate.executeWithoutResult(status -> {
+
+            if (ids[2] != null) {
+                membershipRepository.deleteById(ids[2]);
+            }
+
+            if (ids[1] != null) {
+                userRepository.deleteById(ids[1]);
+            }
+
+            if (ids[0] != null) {
+                organizationRepository.deleteById(ids[0]);
+            }
+        });
+    }
+}
+
+@Test
+void suspendedOrganizationShouldReturn403()
+        throws Exception {
+
+    String uniqueId = UUID.randomUUID().toString();
+    UUID[] ids = new UUID[3];
+
+    try {
+        transactionTemplate.executeWithoutResult(status -> {
+
+            Organization organization = organizationRepository.save(
+                    new Organization(
+                            "Suspended Organization Test",
+                            "suspended-org-" + uniqueId
+                    )
+            );
+
+            User user = userRepository.save(
+                    new User(
+                            "suspended-org-owner-" + uniqueId + "@example.com",
+                            "test-password-hash",
+                            "Organization",
+                            "Owner"
+                    )
+            );
+
+            OrganizationMembership membership =
+                    membershipRepository.save(
+                            new OrganizationMembership(
+                                    organization,
+                                    user,
+                                    MembershipRole.OWNER
+                            )
+                    );
+
+            ids[0] = organization.getId();
+            ids[1] = user.getId();
+            ids[2] = membership.getId();
+        });
+
+        // Generate a valid JWT while the organization is active.
+        Instant now = Instant.now();
+
+        JwtClaimsSet claims = JwtClaimsSet.builder()
+                .issuer(issuer)
+                .issuedAt(now)
+                .expiresAt(now.plusSeconds(3600))
+                .subject(ids[1].toString())
+                .id(UUID.randomUUID().toString())
+                .build();
+
+        String accessToken = jwtEncoder.encode(
+                JwtEncoderParameters.from(
+                        JwsHeader.with(MacAlgorithm.HS256).build(),
+                        claims
+                )
+        ).getTokenValue();
+
+        // Suspend the organization after JWT issuance.
+        jdbcTemplate.update(
+                """
+                UPDATE organizations
+                SET status = 'suspended'
+                WHERE id = ?
+                """,
+                ids[0]
+        );
+
+        // Even an OWNER must not access a suspended organization.
+        mockMvc.perform(
+                get("/api/v1/organizations/{organizationId}", ids[0])
+                        .header("Authorization", "Bearer " + accessToken)
+        )
+        .andExpect(status().isForbidden());
+
+    } finally {
+        transactionTemplate.executeWithoutResult(status -> {
+
+            if (ids[2] != null) {
+                membershipRepository.deleteById(ids[2]);
+            }
+
+            if (ids[1] != null) {
+                userRepository.deleteById(ids[1]);
+            }
+
+            if (ids[0] != null) {
+                organizationRepository.deleteById(ids[0]);
+            }
+        });
+    }
+}
+
 
 }

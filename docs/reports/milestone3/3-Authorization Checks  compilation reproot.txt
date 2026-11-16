@@ -1,0 +1,242 @@
+# Authorization Checks — Implementation and Verification Report
+
+**Project:** Multi-Tenant Property Leasing, Billing, and Maintenance SaaS  
+**Backend Service:** `property-core`  
+**Milestone:** 3 — Tenant Isolation  
+**Task:** 3 — Authorization Checks  
+**Status:** Completed for currently implemented organization functionality  
+**Completion Date:** November 16, 2026
+
+---
+
+## 1. Objective
+
+Implement and verify secure, role-based authorization for organization resources in a multi-tenant SaaS application.
+
+The authorization system must ensure that authenticated users can access only the resources of organizations to which they belong and can perform only operations permitted by their assigned roles.
+
+## 2. Technology Stack
+
+| Component | Technology |
+|---|---|
+| Backend | Spring Boot 4.1.1 |
+| Programming language | Java 21 |
+| Security | Spring Security, JWT |
+| Persistence | Spring Data JPA / Hibernate |
+| Database | PostgreSQL 15 |
+| Database migrations | Flyway |
+| Testing | JUnit 5, Mockito, MockMvc |
+| Build tool | Maven |
+
+## 3. Authorization Architecture
+
+Authorization is implemented through multiple cooperating components.
+
+### 3.1 Spring Security
+
+**File:** `config/security/SecurityConfig.java`
+
+Responsibilities:
+
+- Enforce stateless authentication.
+- Validate JWT access tokens.
+- Allow unauthenticated access to registration, login, and refresh-token endpoints.
+- Require authentication for all other endpoints.
+
+### 3.2 Authenticated Organization Context
+
+**File:** `organization/context/AuthenticatedOrganizationContextResolver.java`
+
+Responsibilities:
+
+- Identify the authenticated user.
+- Resolve the user's membership in the requested organization.
+- Validate the membership, user, and organization statuses.
+- Reject requests without a valid, active organization membership.
+
+### 3.3 Organization Authorization Service
+
+**File:** `organization/permission/service/OrganizationAuthorizationService.java`
+
+Responsibilities:
+
+- Retrieve organization membership information.
+- Validate active membership, user, and organization statuses.
+- Evaluate permissions against the membership role.
+- Return authorization decisions through `hasPermission()`.
+- Enforce permissions through `requirePermission()`.
+- Throw `AccessDeniedException` when authorization fails.
+
+### 3.4 Current User Authorization Service
+
+**File:** `organization/permission/service/CurrentUserAuthorizationService.java`
+
+Responsibilities:
+
+- Retrieve the currently authenticated user's identity.
+- Delegate authorization decisions to `OrganizationAuthorizationService`.
+- Provide permission-enforcement methods for business services.
+
+### 3.5 Organization Service
+
+**File:** `organization/service/OrganizationService.java`
+
+The `getOrganization()` operation performs authorization before retrieving organization information.
+
+Execution sequence:
+
+1. Resolve and validate the authenticated organization's context.
+2. Require `ORGANIZATION_VIEW` permission.
+3. Retrieve the requested organization.
+4. Return the organization response.
+
+This prevents unauthorized organization retrieval through the implemented service operation.
+
+## 4. Role-Based Access Control
+
+The application defines four organization roles:
+
+- OWNER
+- ADMIN
+- MANAGER
+- STAFF
+
+Permissions are centrally defined in `RolePermissionMapping.java`.
+
+### Permission Matrix
+
+| Permission | Owner | Admin | Manager | Staff |
+|---|---|---|---|---|
+| ORGANIZATION_VIEW | Yes | Yes | Yes | Yes |
+| ORGANIZATION_MANAGE | Yes | Yes | No | No |
+| MEMBERSHIP_MANAGE | Yes | Yes | No | No |
+| PROPERTY_VIEW | Yes | Yes | Yes | Yes |
+| PROPERTY_MANAGE | Yes | Yes | Yes | No |
+| LEASE_MANAGE | Yes | Yes | Yes | No |
+| BILLING_MANAGE | Yes | Yes | No | No |
+| MAINTENANCE_MANAGE | Yes | Yes | Yes | Yes |
+
+The OWNER role receives all permissions defined in the `OrganizationPermission` enumeration.
+
+Authorization follows a default-deny approach: users are granted access only when the required conditions are satisfied.
+
+## 5. Security Rules
+
+The authorization implementation enforces the following conditions:
+
+1. The user must be authenticated.
+2. The user must have a membership in the requested organization.
+3. The membership must be ACTIVE.
+4. The user account must be ACTIVE.
+5. The organization must be ACTIVE.
+6. The user's role must include the required permission.
+
+Requests that fail authorization are denied.
+
+## 6. Tests and Verification
+
+### 6.1 Authorization Unit Tests
+
+**File:** `OrganizationAuthorizationServiceTest.java`
+
+Nine tests were executed successfully.
+
+| Test scenario | Result |
+|---|---|
+| Owner can manage memberships | Passed |
+| Staff cannot manage billing | Passed |
+| Suspended membership is denied | Passed |
+| Suspended user is denied | Passed |
+| Suspended organization is denied | Passed |
+| Missing membership is denied | Passed |
+| Null authorization arguments are denied | Passed |
+| Unauthorized operation throws AccessDeniedException | Passed |
+| Active staff without billing permission is denied | Passed |
+
+The final test was added during this task to explicitly verify permission enforcement through `requirePermission()`.
+
+**Test result:** 9 passed, 0 failures, 0 errors.
+
+### 6.2 Existing HTTP Integration Tests
+
+**File:** `OrganizationEndpointIntegrationTest.java`
+
+Six existing tests verify:
+
+- Unauthenticated requests return HTTP 401.
+- Active owners can retrieve their own organization.
+- Users cannot retrieve an organization to which they do not belong.
+- Suspended memberships are denied with HTTP 403.
+- Invalid JWTs return HTTP 401.
+- Expired JWTs return HTTP 401.
+
+All six tests passed.
+
+### 6.3 Full Backend Test Suite
+
+**Command:**
+
+`./mvnw clean test`
+
+**Results:**
+
+| Metric | Result |
+|---|---|
+| Tests executed | 74 |
+| Failures | 0 |
+| Errors | 0 |
+| Skipped | 0 |
+| Build status | BUILD SUCCESS |
+| Execution time | 46.517 seconds |
+
+The build also successfully compiled the application and validated both existing Flyway migrations.
+
+Non-blocking Maven repository metadata and Mockito agent warnings appeared during testing.
+
+## 7. Files Reviewed and Updated
+
+### Reviewed
+
+- `config/security/SecurityConfig.java`
+- `organization/controller/OrganizationController.java`
+- `organization/service/OrganizationService.java`
+- `organization/context/AuthenticatedOrganizationContextResolver.java`
+- `organization/permission/RolePermissionMapping.java`
+- `organization/permission/service/OrganizationAuthorizationService.java`
+- `organization/permission/service/CurrentUserAuthorizationService.java`
+- `organization/controller/OrganizationEndpointIntegrationTest.java`
+
+### Updated
+
+- `src/test/java/com/propertysaas/propertycore/organization/permission/service/OrganizationAuthorizationServiceTest.java`
+
+**Change:** Added `staffWithoutBillingPermissionShouldBeDenied()`.
+
+No production authorization code changes were required during this task.
+
+## 8. Scope and Limitations
+
+Authorization checks are implemented and verified for the currently available organization functionality.
+
+The application does not yet have complete property, lease, billing, and maintenance APIs. Their future service operations must enforce the appropriate permissions and tenant boundaries.
+
+Although unit tests cover suspended users and suspended organizations, additional HTTP-level verification remains appropriate.
+
+Cross-tenant integration testing will be strengthened in the next milestone task.
+
+## 9. Conclusion
+
+**Milestone 3 — Task 3: Authorization Checks is complete for the currently implemented functionality.**
+
+The backend provides:
+
+- JWT-based authentication.
+- Organization membership validation.
+- Role-based permission evaluation.
+- Explicit authorization enforcement.
+- Denial of unauthorized operations.
+- Successful unit and integration test verification.
+
+The complete backend test suite passed with 74 tests and no failures or errors.
+
+**Next Task:** Milestone 3 — Task 4: Cross-Tenant Security Tests.

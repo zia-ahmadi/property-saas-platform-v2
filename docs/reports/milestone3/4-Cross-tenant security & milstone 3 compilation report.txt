@@ -1,0 +1,25 @@
+Milestone 3 completion checklist
+Task	Status
+1. Authenticated organization context	Completed
+2. Tenant-scoped repositories	Completed for current entities
+3. Authorization checks	Completed
+4. Cross-tenant security tests	Completed for current endpoints
+
+Final verification
+The full test suite confirms that the existing authentication, refresh-token, organization context, repository, authorization, and organization endpoint tests continue to pass.
+
+In particular:
+- 9 organization endpoint integration tests passed.
+- 9 organization authorization service tests passed.
+- 7 organization context resolver tests passed.
+- 6 role-permission mapping tests passed.
+These counts are confirmed in your Maven output. Pasted text(20261116-041209).txt
+
+
+Flyway also successfully validated both database migrations. The Maven repository metadata and Mockito agent warnings did not prevent the build from succeeding.
+What this means for your project
+Your property-core backend now has a tested foundation for tenant-aware authentication and authorization.
+
+However, this is not yet a guarantee of complete SaaS-wide tenant isolation. As we implement properties, leases, billing, maintenance, and other modules, we must apply the same tenant-scoping rules and write cross-tenant tests for their endpoints.
+
+Milestone 3 is complete within the scope of the currently implemented backend. We can now move forward to the next development milestone, while continuing to enforce tenant isolation in every new feature.

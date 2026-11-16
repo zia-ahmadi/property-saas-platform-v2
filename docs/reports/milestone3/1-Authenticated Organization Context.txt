@@ -1,0 +1,48 @@
+# Milestone 3 — Task 1 Completion Report
+**Project:** Multi-Tenant Property Leasing, Billing, and Maintenance SaaS  
+**Module:** `backend/property-core`  
+**Task:** Authenticated Organization Context  
+**Status:** COMPLETED  
+**Completion Date:** November 16, 2026
+
+## 1. Objective
+Implement a secure organization context mechanism that identifies the authenticated user and validates their membership before allowing access to organization-specific resources.
+
+## 2. Implementation Completed
+
+**New Components:**
+- `AuthenticatedOrganizationContext.java` — Immutable record containing user ID, organization ID, membership ID, and membership role.
+- `AuthenticatedOrganizationContextResolver.java` — Resolves organization context using the authenticated JWT identity and validates membership, user, and organization status.
+
+**Updated Components:**
+- `OrganizationService.java` — Integrated organization context validation before permission checks and database access.
+- `OrganizationServiceTest.java` — Added resolver dependency and security verification tests.
+
+**Security Measures:**
+- Rejects users without valid organization membership.
+- Rejects suspended memberships, users, and organizations.
+- Prevents organization data retrieval when context validation fails.
+- Preserves existing role-based authorization.
+- Enforces the execution order: context validation → permission verification → data retrieval.
+
+## 3. Testing Results
+
+| Test Suite | Passed | Failed |
+|---|---:|---:|
+| AuthenticatedOrganizationContextResolverTest | 7 | 0 |
+| OrganizationServiceTest | 4 | 0 |
+| **Total** | **11** | **0** |
+
+**Build Status:** SUCCESS
+
+The complete backend test suite previously passed 69 tests. The final targeted tests passed after the latest changes.
+
+## 4. Outcome
+Authenticated organization context resolution is implemented, integrated into the organization retrieval service, and verified through unit tests.
+
+The implementation establishes a security foundation for tenant isolation. Database-level tenant-scoped queries and comprehensive cross-tenant security tests remain part of subsequent tasks.
+
+## 5. Next Task
+**Milestone 3 — Task 2: Tenant-Scoped Repositories**
+
+Implement organization-scoped database queries to prevent unauthorized access to resources belonging to other tenants.

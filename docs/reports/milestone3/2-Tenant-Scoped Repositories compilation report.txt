@@ -1,0 +1,45 @@
+# Milestone 3 — Task 2: Tenant-Scoped Repositories
+**Completion Report**
+
+**Project:** Multi-Tenant Property Leasing, Billing, and Maintenance SaaS  
+**Backend:** Spring Boot 4.1.1, Java 21, PostgreSQL 15, Spring Data JPA  
+**Status:** Completed  
+**Date:** November 16, 2026
+
+### 1. Objective
+Implement and verify tenant-scoped repository queries to ensure organization-specific data can be retrieved without mixing records from different tenants.
+
+### 2. Work Completed
+- Reviewed all four existing JPA repositories.
+- Added `findAllByOrganizationId(UUID organizationId)` to `OrganizationMembershipRepository`.
+- Preserved global user and authentication repositories without unnecessary tenant filtering.
+- Created `OrganizationMembershipRepositoryIntegrationTest.java`.
+- Implemented three PostgreSQL integration tests covering:
+  - Organization A membership isolation.
+  - Organization B membership isolation.
+  - Empty results for an unknown organization.
+- Verified the repository query against PostgreSQL.
+
+### 3. Test Results
+
+| Verification | Result |
+|---|---|
+| Repository integration tests | 3 passed |
+| Complete test suite | 73 passed |
+| Failures | 0 |
+| Errors | 0 |
+| Flyway schema | Version 2, validated |
+| Maven build | BUILD SUCCESS |
+
+### 4. Security Considerations
+- Organization membership queries are explicitly filtered by `organizationId`.
+- Global identity and refresh-token repositories remain separate from tenant-specific data access.
+- Repository scoping does not independently enforce authorization; service-level permission checks remain necessary.
+- Future business repositories must implement tenant scoping when introduced.
+
+### 5. Final Outcome
+**Milestone 3 — Task 2 is completed for the currently implemented entities.**
+
+The organization membership repository supports verified tenant-scoped queries, and all 73 existing tests pass.
+
+**Next Task:** Milestone 3 — Task 3: Authorization Checks.

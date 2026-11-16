@@ -177,6 +177,30 @@ class OrganizationAuthorizationServiceTest {
         );
     }
 
+
+@Test
+void staffWithoutBillingPermissionShouldBeDenied() {
+    mockMembership(
+            MembershipRole.STAFF,
+            MembershipStatus.ACTIVE
+    );
+
+    assertThrows(
+            AccessDeniedException.class,
+            () -> authorizationService.requirePermission(
+                    userId,
+                    organizationId,
+                    OrganizationPermission.BILLING_MANAGE
+            )
+    );
+
+    verify(membershipRepository).findByOrganizationIdAndUserId(
+            organizationId,
+            userId
+    );
+}
+
+
     private void mockMembership(
             MembershipRole role,
             MembershipStatus status

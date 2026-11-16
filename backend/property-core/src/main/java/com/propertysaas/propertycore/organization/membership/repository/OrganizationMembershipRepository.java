@@ -28,4 +28,9 @@ public interface OrganizationMembershipRepository
             UUID organizationId,
             UUID userId
     );
+
+List<OrganizationMembership> findAllByOrganizationId(
+        UUID organizationId
+);
+
 }
