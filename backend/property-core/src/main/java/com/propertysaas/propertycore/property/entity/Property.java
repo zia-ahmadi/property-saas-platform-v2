@@ -1,5 +1,6 @@
 package com.propertysaas.propertycore.property.entity;
 
+import com.propertysaas.propertycore.common.exception.ConflictException;
 import com.propertysaas.propertycore.organization.entity.Organization;
 
 import jakarta.persistence.Column;
@@ -17,6 +18,8 @@ import tools.jackson.databind.JsonNode;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+
+
 
 import java.time.Instant;
 import java.util.UUID;
@@ -136,40 +139,47 @@ public class Property {
         return updatedAt;
     }
 
-public void applyUpdates(JsonNode changes) {
+    public void applyUpdates(JsonNode changes) {
 
-    if (changes.has("name")) {
-        this.name = changes.get("name").stringValue();
+        // Archived properties are read-only.
+        if (this.status == PropertyStatus.ARCHIVED) {
+            throw new ConflictException(
+                    "Archived properties cannot be updated"
+            );
+        }
+
+        if (changes.has("name")) {
+            this.name = changes.get("name").stringValue();
+        }
+
+        if (changes.has("propertyType")) {
+            this.propertyType = PropertyType.valueOf(
+                    changes.get("propertyType").stringValue()
+            );
+        }
+
+        if (changes.has("addressLine1")) {
+            this.addressLine1 =
+                    changes.get("addressLine1").stringValue();
+        }
+
+        if (changes.has("addressLine2")) {
+            JsonNode value = changes.get("addressLine2");
+
+            this.addressLine2 = value.isNull()
+                    ? null
+                    : value.stringValue();
+        }
+
+        if (changes.has("city")) {
+            this.city = changes.get("city").stringValue();
+        }
+
+        if (changes.has("countryCode")) {
+            this.countryCode =
+                    changes.get("countryCode").stringValue();
+        }
     }
-
-    if (changes.has("propertyType")) {
-        this.propertyType = PropertyType.valueOf(
-                changes.get("propertyType").stringValue()
-        );
-    }
-
-    if (changes.has("addressLine1")) {
-        this.addressLine1 =
-                changes.get("addressLine1").stringValue();
-    }
-
-    if (changes.has("addressLine2")) {
-        JsonNode value = changes.get("addressLine2");
-
-        this.addressLine2 = value.isNull()
-                ? null
-                : value.stringValue();
-    }
-
-    if (changes.has("city")) {
-        this.city = changes.get("city").stringValue();
-    }
-
-    if (changes.has("countryCode")) {
-        this.countryCode =
-                changes.get("countryCode").stringValue();
-    }
-}
 
     /** Archive the property without deleting it. Repeated calls are no-ops. */
     public void archive() {

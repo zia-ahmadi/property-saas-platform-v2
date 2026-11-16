@@ -1,0 +1,19 @@
+Milestone 4 completion report
+Task	Status
+1. Create property	Completed
+2. List properties with pagination	Completed
+3. Retrieve property details	Completed
+4. Update property	Completed
+5. Archive property	Completed
+6. Property ownership and validation	Completed
+
+Task 6 — Final implementation summary
+Property ownership: Every property belongs to an organization. Organization-scoped repository queries prevent cross-tenant access, and the update allowlist prevents clients from changing organizationId.
+
+Validation: Create and update requests enforce required fields, permitted property types, field lengths, country-code format, and allowed update fields.
+
+Archived property protection: The Property.applyUpdates() method now rejects changes to archived properties using ConflictException, which maps to HTTP 409 Conflict.
+
+Lifecycle behavior: Archived properties remain readable, and repeated archive requests remain idempotent.
+
+Testing: Six new integration tests were added. All 138 tests passed, including authentication, authorization, tenant isolation, and property management tests.
