@@ -4,7 +4,7 @@ package com.propertysaas.propertycore.unit.controller;
 import com.propertysaas.propertycore.unit.dto.CreateUnitRequest;
 import com.propertysaas.propertycore.unit.dto.UnitResponse;
 import com.propertysaas.propertycore.unit.service.UnitService;
-
+import com.propertysaas.propertycore.unit.dto.UpdateUnitAvailabilityRequest;
 import jakarta.validation.Valid;
 
 import org.springframework.http.HttpStatus;
@@ -142,6 +142,25 @@ public class UnitController {
         return ResponseEntity.ok(response);
     }
 
+// ---------------------------------------------------------
+// Update Unit Availability
+// ---------------------------------------------------------
 
+@PatchMapping("/{unitId}/availability")
+public ResponseEntity<UnitResponse> updateUnitAvailability(
+        @PathVariable UUID organizationId,
+        @PathVariable UUID propertyId,
+        @PathVariable UUID unitId,
+        @Valid @RequestBody UpdateUnitAvailabilityRequest request
+) {
+    UnitResponse response = unitService.updateUnitAvailability(
+            organizationId,
+            propertyId,
+            unitId,
+            request
+    );
+
+    return ResponseEntity.ok(response);
+}
 
 }

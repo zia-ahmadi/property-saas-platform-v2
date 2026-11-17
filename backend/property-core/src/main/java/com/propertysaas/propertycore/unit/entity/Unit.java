@@ -19,6 +19,8 @@ import jakarta.persistence.UniqueConstraint;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import com.propertysaas.propertycore.common.exception.ConflictException;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Objects;
@@ -136,6 +138,33 @@ public class Unit {
         this.availabilityStatus =
                 UnitAvailabilityStatus.AVAILABLE;
     }
+    /**
+ * Changes unit availability through the manual management workflow.
+ *
+ * Occupancy transitions are reserved for lease management.
+ */
+public void changeAvailability(
+        UnitAvailabilityStatus requestedStatus
+) {
+    Objects.requireNonNull(
+            requestedStatus,
+            "Availability status must not be null"
+    );
+
+    if (this.availabilityStatus == requestedStatus) {
+        return;
+    }
+
+    if (this.availabilityStatus == UnitAvailabilityStatus.OCCUPIED
+            || requestedStatus == UnitAvailabilityStatus.OCCUPIED) {
+
+        throw new ConflictException(
+                "Occupied status can only be changed through lease management"
+        );
+    }
+
+    this.availabilityStatus = requestedStatus;
+}
 
 
     /**

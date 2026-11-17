@@ -16,6 +16,7 @@ import com.propertysaas.propertycore.unit.dto.UnitResponse;
 import com.propertysaas.propertycore.unit.entity.Unit;
 import com.propertysaas.propertycore.unit.repository.UnitRepository;
 import com.propertysaas.propertycore.unit.validation.UpdateUnitRequestValidator;
+import com.propertysaas.propertycore.unit.dto.UpdateUnitAvailabilityRequest;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -275,6 +276,74 @@ public class UnitService {
         // 10. Return the updated unit.
         return toUnitResponse(unit);
     }
+
+    // ---------------------------------------------------------
+// Update Unit Availability
+// ---------------------------------------------------------
+
+@Transactional
+public UnitResponse updateUnitAvailability(
+        UUID organizationId,
+        UUID propertyId,
+        UUID unitId,
+        UpdateUnitAvailabilityRequest request
+) {
+    // 1. Verify authenticated organization membership.
+    contextResolver.resolve(organizationId);
+
+    // 2. Require permission to manage properties.
+    authorizationService.requirePermission(
+            organizationId,
+            OrganizationPermission.PROPERTY_MANAGE
+    );
+
+    // 3. Validate the request.
+    if (request == null || request.availabilityStatus() == null) {
+        throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Availability status is required"
+        );
+    }
+
+    // 4. Retrieve the property within the organization.
+    Property property = propertyRepository
+            .findByIdAndOrganizationId(
+                    propertyId,
+                    organizationId
+            )
+            .orElseThrow(() -> new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Property not found"
+            ));
+
+    // 5. Reject changes under archived properties.
+    if (property.getStatus() == PropertyStatus.ARCHIVED) {
+        throw new ConflictException(
+                "Cannot change unit availability under an archived property"
+        );
+    }
+
+    // 6. Retrieve the unit within the property and organization.
+    Unit unit = unitRepository
+            .findByIdAndProperty_IdAndProperty_Organization_Id(
+                    unitId,
+                    propertyId,
+                    organizationId
+            )
+            .orElseThrow(() -> new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Unit not found"
+            ));
+
+    // 7. Enforce availability transition rules.
+    unit.changeAvailability(request.availabilityStatus());
+
+    // 8. Persist the updated status.
+    unitRepository.flush();
+
+    // 9. Return the updated unit.
+    return toUnitResponse(unit);
+}
 
     // ---------------------------------------------------------
     // Shared Response Mapper

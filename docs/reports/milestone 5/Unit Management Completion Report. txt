@@ -1,0 +1,141 @@
+Milestone 5 — Unit Management Completion Report
+Project: Multi-Tenant Property Leasing, Billing, and Maintenance SaaS
+Backend: Property Core Service
+Technology Stack: Java 21, Spring Boot 4.1.1, Spring Security, Spring Data JPA, PostgreSQL 15, Flyway, Maven, JUnit 5, Mockito, MockMvc
+Report Date: November 17, 2026
+Status: Completed, tested, and committed
+1. Executive Summary
+Milestone 5 successfully implemented the Unit Management module of the Property Management SaaS platform.
+
+The module enables authorized organization members to create, retrieve, list, update, and manage the availability of units belonging to properties within their organization.
+
+The implementation integrates with the existing multi-tenant architecture, JWT authentication, role-based authorization, and PostgreSQL persistence layer.
+
+The final backend regression test executed 227 tests with zero failures, zero errors, and zero skipped tests, confirming that the new functionality passed alongside the existing backend modules.
+2. Completed Features
+Feature	Description	Status
+Create Unit	Register a unit under an existing property	Completed
+List Units	Retrieve units with pagination	Completed
+Unit Details	Retrieve information about a specific unit	Completed
+Update Unit	Modify supported unit attributes	Completed
+Unit Availability	Change availability between AVAILABLE and UNAVAILABLE	Completed
+Tenant Isolation	Prevent cross-organization unit access	Completed
+Authorization	Enforce role-based permissions	Completed
+Request Validation	Reject invalid request data	Completed
+Integration Testing	Verify API behavior and database persistence	Completed
+
+3. Technical Implementation
+The module follows the application's established layered architecture.
+UnitController
+
+HTTP endpoints, request validation, response handling
+
+
+UnitService
+
+Business rules, authorization, organization context
+
+
+UnitRepository / Unit Entity
+
+Tenant-scoped queries, domain behavior, JPA persistence
+
+
+PostgreSQL Database
+
+Persistent unit records and relational constraints
+
+
+The implementation uses DTOs to separate HTTP request and response structures from the persistence model.
+4. Unit Availability Management
+Three availability states are defined:
+Status	Meaning
+AVAILABLE	Unit is available for leasing
+UNAVAILABLE	Unit is temporarily unavailable
+OCCUPIED	Unit is associated with occupancy managed by future lease functionality
+
+The following business rules were implemented:
+- Authorized users can change AVAILABLE to UNAVAILABLE and vice versa.
+- Repeating the same availability status is accepted as an idempotent operation.
+- Manual transitions to or from OCCUPIED are rejected with HTTP 409.
+- Availability changes are rejected for archived properties.
+- Availability changes are restricted to the correct organization and property.
+- Invalid request bodies are rejected with HTTP 400.
+The availability endpoint is:
+PATCH /api/v1/organizations/{organizationId}/properties/{propertyId}/units/{unitId}/availability
+
+
+Example request:
+{
+  "availabilityStatus": "UNAVAILABLE"
+}
+
+
+Successful requests return HTTP 200 with the updated unit response.
+5. Security and Tenant Isolation
+The module reuses the authentication and authorization infrastructure established in earlier milestones.
+
+Security measures include JWT authentication, PROPERTY_MANAGE permission enforcement for availability updates, organization-context resolution, and tenant-scoped database lookups.
+
+Integration tests verified rejection of unauthorized access, cross-organization requests, and unit identifiers that do not belong to the requested property.
+6. Error Handling Improvements
+During integration testing, an invalid availability enum value revealed an issue in the shared exception handler.
+
+Previously, an unsupported enum value could produce HTTP 500 rather than HTTP 400.
+
+The GlobalExceptionHandler was updated to handle HttpMessageNotReadableException explicitly.
+
+This change provides consistent client-error responses for malformed JSON and invalid request-body values while preserving the existing ErrorResponse format.
+7. Testing and Validation
+The availability functionality was validated using unit tests and full Spring Boot integration tests.
+Test suite	Tests	Result
+Unit Availability Service	12	Passed
+Unit Availability Endpoint	13	Passed
+Unit Update Endpoint	13	Passed
+Unit Listing Endpoint	10	Passed
+Unit Details Endpoint	8	Passed
+Unit Endpoint	8	Passed
+Unit Repository	9	Passed
+Unit Service	16	Passed
+
+These are the relevant Unit Management suites included in the final regression run.
+Final backend regression results
+Total tests
+227
+
+
+Passed
+227
+
+
+Failures
+0
+
+
+Errors
+0
+
+
+
+Final validation command:
+./mvnw clean test
+
+
+Result:
+Tests run: 227, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS
+Total time: 27.537 s
+
+
+Flyway also successfully validated the four existing database migrations, with the schema at version 4.
+8. Remaining Considerations
+The following items are outside the completed Unit Management scope or can be addressed during later maintenance:
+- Occupancy transitions will be integrated with lease management.
+- Frontend integration and API contract synchronization should be reviewed in their planned project phases.
+- Mockito dynamic-agent warnings and Maven repository authentication warnings remain non-blocking cleanup items.
+9. Final Conclusion
+Milestone 5 — Unit Management is successfully completed.
+
+The module now supports the agreed unit lifecycle operations, enforces organization-level security, validates requests, and maintains database consistency.
+
+All 227 backend tests passed, and the completed implementation has been committed to Git.
