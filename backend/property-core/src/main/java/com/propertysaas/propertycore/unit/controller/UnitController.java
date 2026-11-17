@@ -23,6 +23,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.propertysaas.propertycore.unit.dto.UpdateUnitRequest;
+import org.springframework.web.bind.annotation.PatchMapping;
+import tools.jackson.databind.JsonNode;
+
 import java.net.URI;
 import java.util.UUID;
 
@@ -96,5 +100,48 @@ public class UnitController {
 
         return ResponseEntity.ok(PageResponse.from(units));
     }
+
+    // ---------------------------------------------------------
+    // Retrieve Unit Details
+    // ---------------------------------------------------------
+
+    @GetMapping("/{unitId}")
+    public ResponseEntity<UnitResponse> getUnitDetails(
+            @PathVariable UUID organizationId,
+            @PathVariable UUID propertyId,
+            @PathVariable UUID unitId
+    ) {
+        UnitResponse response = unitService.getUnitDetails(
+                organizationId,
+                propertyId,
+                unitId
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
+
+    // ---------------------------------------------------------
+    // Update Unit
+    // ---------------------------------------------------------
+
+    @PatchMapping("/{unitId}")
+    public ResponseEntity<UnitResponse> updateUnit(
+            @PathVariable UUID organizationId,
+            @PathVariable UUID propertyId,
+            @PathVariable UUID unitId,
+            @RequestBody JsonNode changes
+    ) {
+        UnitResponse response = unitService.updateUnit(
+                organizationId,
+                propertyId,
+                unitId,
+                new UpdateUnitRequest(changes)
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
+
 
 }

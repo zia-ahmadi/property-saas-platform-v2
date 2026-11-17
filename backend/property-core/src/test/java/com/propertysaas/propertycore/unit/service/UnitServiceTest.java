@@ -452,4 +452,188 @@ class UnitServiceTest {
     }
 
     
+    // ---------------------------------------------------------
+    // Retrieve Unit Details: Successful retrieval
+    // ---------------------------------------------------------
+
+    @Test
+    void getUnitDetails_shouldReturnRequestedUnit() {
+        UUID unitId = UUID.randomUUID();
+
+        Unit unit = new Unit(
+                property,
+                "A-101",
+                UnitType.APARTMENT,
+                1,
+                new BigDecimal("85.50")
+        );
+
+        ReflectionTestUtils.setField(unit, "id", unitId);
+
+        when(propertyRepository.existsByIdAndOrganizationId(
+                propertyId,
+                organizationId
+        )).thenReturn(true);
+
+        when(unitRepository.findByIdAndProperty_IdAndProperty_Organization_Id(
+                unitId,
+                propertyId,
+                organizationId
+        )).thenReturn(Optional.of(unit));
+
+        UnitResponse response = unitService.getUnitDetails(
+                organizationId,
+                propertyId,
+                unitId
+        );
+
+        assertEquals(unitId, response.id());
+        assertEquals(propertyId, response.propertyId());
+        assertEquals("A-101", response.unitNumber());
+        assertEquals(UnitType.APARTMENT, response.unitType());
+        assertEquals(1, response.floorNumber());
+        assertEquals(
+                new BigDecimal("85.50"),
+                response.areaSqm()
+        );
+        assertEquals(
+                UnitAvailabilityStatus.AVAILABLE,
+                response.availabilityStatus()
+        );
+
+        verify(contextResolver).resolve(organizationId);
+
+        verify(unitRepository)
+                .findByIdAndProperty_IdAndProperty_Organization_Id(
+                        unitId,
+                        propertyId,
+                        organizationId
+                );
+
+        verifyNoInteractions(authorizationService);
+    }
+
+    // ---------------------------------------------------------
+    // Retrieve Unit Details: Unit not found
+    // ---------------------------------------------------------
+
+    @Test
+    void getUnitDetails_shouldReturn404WhenUnitDoesNotExist() {
+        UUID unitId = UUID.randomUUID();
+
+        when(propertyRepository.existsByIdAndOrganizationId(
+                propertyId,
+                organizationId
+        )).thenReturn(true);
+
+        when(unitRepository.findByIdAndProperty_IdAndProperty_Organization_Id(
+                unitId,
+                propertyId,
+                organizationId
+        )).thenReturn(Optional.empty());
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> unitService.getUnitDetails(
+                        organizationId,
+                        propertyId,
+                        unitId
+                )
+        );
+
+        assertEquals(
+                HttpStatus.NOT_FOUND,
+                exception.getStatusCode()
+        );
+
+        verify(contextResolver).resolve(organizationId);
+
+        verify(unitRepository)
+                .findByIdAndProperty_IdAndProperty_Organization_Id(
+                        unitId,
+                        propertyId,
+                        organizationId
+                );
+
+        verifyNoInteractions(authorizationService);
+    }
+
+    // ---------------------------------------------------------
+    // Retrieve Unit Details: Property outside organization
+    // ---------------------------------------------------------
+
+    @Test
+    void getUnitDetails_shouldReturn404WhenPropertyOutsideOrganization() {
+        UUID unitId = UUID.randomUUID();
+
+        // The property does not belong to the requested organization.
+        when(propertyRepository.existsByIdAndOrganizationId(
+                propertyId,
+                organizationId
+        )).thenReturn(false);
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> unitService.getUnitDetails(
+                        organizationId,
+                        propertyId,
+                        unitId
+                )
+        );
+
+        assertEquals(
+                HttpStatus.NOT_FOUND,
+                exception.getStatusCode()
+        );
+
+        // Organization membership must be checked first.
+        verify(contextResolver).resolve(organizationId);
+
+        // Property ownership must be verified.
+        verify(propertyRepository).existsByIdAndOrganizationId(
+                propertyId,
+                organizationId
+        );
+
+        // The unit repository must never be queried.
+        verifyNoInteractions(unitRepository);
+
+        // Read operations must not require management permission.
+        verifyNoInteractions(authorizationService);
+    }
+
+
+    // ---------------------------------------------------------
+    // Retrieve Unit Details: Unauthorized organization
+    // ---------------------------------------------------------
+
+    @Test
+    void getUnitDetails_shouldRejectUnauthorizedOrganization() {
+        UUID unitId = UUID.randomUUID();
+
+        // Simulate a user without membership in the organization.
+        doThrow(new AccessDeniedException(
+                "Access to this organization is denied"
+        )).when(contextResolver).resolve(organizationId);
+
+        // The service must reject the request.
+        assertThrows(
+                AccessDeniedException.class,
+                () -> unitService.getUnitDetails(
+                        organizationId,
+                        propertyId,
+                        unitId
+                )
+        );
+
+        // Organization access must be checked.
+        verify(contextResolver).resolve(organizationId);
+
+        // No database lookup should happen after access is denied.
+        verifyNoInteractions(propertyRepository, unitRepository);
+
+        // Read-only operations do not require management permission.
+        verifyNoInteractions(authorizationService);
+    }
+
 }

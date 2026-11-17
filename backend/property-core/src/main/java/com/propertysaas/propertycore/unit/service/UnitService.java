@@ -11,20 +11,20 @@ import com.propertysaas.propertycore.property.entity.PropertyStatus;
 import com.propertysaas.propertycore.property.repository.PropertyRepository;
 
 import com.propertysaas.propertycore.unit.dto.CreateUnitRequest;
+import com.propertysaas.propertycore.unit.dto.UpdateUnitRequest;
 import com.propertysaas.propertycore.unit.dto.UnitResponse;
 import com.propertysaas.propertycore.unit.entity.Unit;
 import com.propertysaas.propertycore.unit.repository.UnitRepository;
-
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
-
+import com.propertysaas.propertycore.unit.validation.UpdateUnitRequestValidator;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 
 import java.util.UUID;
@@ -36,17 +36,20 @@ public class UnitService {
     private final PropertyRepository propertyRepository;
     private final AuthenticatedOrganizationContextResolver contextResolver;
     private final CurrentUserAuthorizationService authorizationService;
+    private final UpdateUnitRequestValidator updateUnitRequestValidator;
 
     public UnitService(
             UnitRepository unitRepository,
             PropertyRepository propertyRepository,
             AuthenticatedOrganizationContextResolver contextResolver,
-            CurrentUserAuthorizationService authorizationService
+            CurrentUserAuthorizationService authorizationService,
+            UpdateUnitRequestValidator updateUnitRequestValidator
     ) {
         this.unitRepository = unitRepository;
         this.propertyRepository = propertyRepository;
         this.contextResolver = contextResolver;
         this.authorizationService = authorizationService;
+        this.updateUnitRequestValidator = updateUnitRequestValidator;
     }
 
     // ---------------------------------------------------------
@@ -59,16 +62,13 @@ public class UnitService {
             UUID propertyId,
             CreateUnitRequest request
     ) {
-        // Validate authenticated organization membership.
         contextResolver.resolve(organizationId);
 
-        // Require property management permission.
         authorizationService.requirePermission(
                 organizationId,
                 OrganizationPermission.PROPERTY_MANAGE
         );
 
-        // Retrieve the property within the authenticated tenant.
         Property property = propertyRepository
                 .findByIdAndOrganizationId(
                         propertyId,
@@ -79,17 +79,14 @@ public class UnitService {
                         "Property not found"
                 ));
 
-        // Archived properties cannot receive new units.
         if (property.getStatus() == PropertyStatus.ARCHIVED) {
             throw new ConflictException(
                     "Cannot create units under an archived property"
             );
         }
 
-        // Normalize the unit number.
         String unitNumber = request.unitNumber().trim();
 
-        // Reject duplicates within the same property.
         if (unitRepository.existsByProperty_IdAndUnitNumber(
                 propertyId,
                 unitNumber
@@ -112,7 +109,6 @@ public class UnitService {
         return toUnitResponse(savedUnit);
     }
 
-
     // ---------------------------------------------------------
     // List Units with Pagination
     // ---------------------------------------------------------
@@ -124,17 +120,14 @@ public class UnitService {
             int page,
             int size
     ) {
-        // 1. Verify authenticated organization membership.
         contextResolver.resolve(organizationId);
 
-        // 2. Validate pagination parameters.
         if (page < 0 || size < 1 || size > 100) {
             throw new IllegalArgumentException(
                     "Page must be >= 0 and size must be between 1 and 100"
             );
         }
 
-        // 3. Verify that the property belongs to this organization.
         if (!propertyRepository.existsByIdAndOrganizationId(
                 propertyId,
                 organizationId
@@ -145,7 +138,6 @@ public class UnitService {
             );
         }
 
-        // 4. Apply deterministic sorting.
         Pageable pageable = PageRequest.of(
                 page,
                 size,
@@ -155,7 +147,6 @@ public class UnitService {
                 )
         );
 
-        // 5. Query units within the property and organization.
         Page<Unit> units =
                 unitRepository.findAllByProperty_IdAndProperty_Organization_Id(
                         propertyId,
@@ -163,10 +154,127 @@ public class UnitService {
                         pageable
                 );
 
-        // 6. Convert entities to response DTOs.
         return units.map(this::toUnitResponse);
     }
 
+    // ---------------------------------------------------------
+    // Retrieve Unit Details
+    // ---------------------------------------------------------
+
+    @Transactional(readOnly = true)
+    public UnitResponse getUnitDetails(
+            UUID organizationId,
+            UUID propertyId,
+            UUID unitId
+    ) {
+        contextResolver.resolve(organizationId);
+
+        if (!propertyRepository.existsByIdAndOrganizationId(
+                propertyId,
+                organizationId
+        )) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Property not found"
+            );
+        }
+
+        Unit unit = unitRepository
+                .findByIdAndProperty_IdAndProperty_Organization_Id(
+                        unitId,
+                        propertyId,
+                        organizationId
+                )
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Unit not found"
+                ));
+
+        return toUnitResponse(unit);
+    }
+
+    // ---------------------------------------------------------
+    // Update Unit
+    // ---------------------------------------------------------
+
+    @Transactional
+    public UnitResponse updateUnit(
+            UUID organizationId,
+            UUID propertyId,
+            UUID unitId,
+            UpdateUnitRequest request
+    ) {
+        // 1. Verify authenticated organization membership.
+        contextResolver.resolve(organizationId);
+
+        // 2. Require permission to manage properties.
+        authorizationService.requirePermission(
+                organizationId,
+                OrganizationPermission.PROPERTY_MANAGE
+        );
+
+        // 3. Validate the partial-update payload.
+        updateUnitRequestValidator.validate(request);
+
+        // 4. Retrieve the property within the tenant.
+        Property property = propertyRepository
+                .findByIdAndOrganizationId(
+                        propertyId,
+                        organizationId
+                )
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Property not found"
+                ));
+
+        // 5. Reject modifications to archived properties.
+        if (property.getStatus() == PropertyStatus.ARCHIVED) {
+            throw new ConflictException(
+                    "Cannot update units under an archived property"
+            );
+        }
+
+        // 6. Retrieve the unit within the property and tenant.
+        Unit unit = unitRepository
+                .findByIdAndProperty_IdAndProperty_Organization_Id(
+                        unitId,
+                        propertyId,
+                        organizationId
+                )
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Unit not found"
+                ));
+
+        // 7. Check for duplicate unit numbers.
+        var newUnitNumberNode =
+                request.changes().get("unitNumber");
+
+        if (newUnitNumberNode != null) {
+
+            String newUnitNumber =
+                    newUnitNumberNode.stringValue().trim();
+
+            if (!newUnitNumber.equals(unit.getUnitNumber())
+                    && unitRepository.existsByProperty_IdAndUnitNumber(
+                            propertyId,
+                            newUnitNumber
+                    )) {
+                throw new ConflictException(
+                        "A unit with this number already exists in the property"
+                );
+            }
+        }
+
+        // 8. Apply validated changes.
+        unit.applyUpdates(request.changes());
+
+        // 9. Synchronize changes with PostgreSQL.
+        unitRepository.flush();
+
+        // 10. Return the updated unit.
+        return toUnitResponse(unit);
+    }
 
     // ---------------------------------------------------------
     // Shared Response Mapper

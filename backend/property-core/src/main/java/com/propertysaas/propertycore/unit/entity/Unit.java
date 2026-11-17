@@ -24,6 +24,8 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
+import tools.jackson.databind.JsonNode;
+
 @Entity
 @Table(
         name = "units",
@@ -134,6 +136,49 @@ public class Unit {
         this.availabilityStatus =
                 UnitAvailabilityStatus.AVAILABLE;
     }
+
+
+    /**
+     * Applies validated partial updates to the unit.
+     *
+     * The request must be validated by
+     * UpdateUnitRequestValidator before calling this method.
+     */
+    public void applyUpdates(JsonNode changes) {
+
+        for (var entry : changes.properties()) {
+
+            String field = entry.getKey();
+            JsonNode value = entry.getValue();
+
+            switch (field) {
+
+                case "unitNumber" ->
+                        this.unitNumber =
+                                value.stringValue().trim();
+
+                case "unitType" ->
+                        this.unitType = UnitType.valueOf(
+                                value.stringValue()
+                        );
+
+                case "floorNumber" ->
+                        this.floorNumber = value.isNull()
+                                ? null
+                                : value.intValue();
+
+                case "areaSqm" ->
+                        this.areaSqm = value.isNull()
+                                ? null
+                                : new BigDecimal(value.toString());
+
+                default -> throw new IllegalArgumentException(
+                        "Field cannot be updated: " + field
+                );
+            }
+        }
+    }
+
 
     public UUID getId() {
         return id;
