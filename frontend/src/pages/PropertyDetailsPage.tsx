@@ -1,5 +1,6 @@
 import { Link, useParams } from 'react-router'
 import { Building2, MapPin, Layers, ArrowLeft, ExternalLink } from 'lucide-react'
+import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { buttonVariants } from '@/components/ui/button'
 
 export function PropertyDetailsPage() {
@@ -7,6 +8,10 @@ export function PropertyDetailsPage() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumbs
+        ancestors={[{ label: 'Properties', to: '/properties' }]}
+        current="Property Details"
+      />
       <div className="flex min-w-0 items-center gap-4">
         <Link
           to="/properties"

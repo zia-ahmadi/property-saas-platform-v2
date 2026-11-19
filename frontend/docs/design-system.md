@@ -154,3 +154,41 @@ function handleSaved() {
 ```
 
 Notifications use polite announcements, stay out of the way of the current focus, and provide a labeled close button. Escape dismisses a focused toast. Base UI pauses timed dismissal during hover or keyboard focus. Success and informational messages time out after eight seconds, while warnings and errors require dismissal. The viewport shows the three newest toasts. Older active toasts can reappear when space becomes available, so put essential information inline. Toasts use semantic colors, distinct icons, and accessible variant labels without animation.
+
+### Page headers and breadcrumbs
+
+`PageHeader` takes a `title`, an optional `description`, and optional `actions` and `breadcrumbs` slots. It uses an `h1` by default. Use `headingLevel={2}` when the application shell already supplies the top-level heading. Long titles wrap, and actions can flow onto their own row on narrow screens.
+
+`Breadcrumbs` takes `ancestors` as ordered `{ label, to }` items and a `current` label. Each destination accepts React Router's `To` type. Supply labels and paths from the page's own context. The component renders a named navigation landmark and ordered list. Ancestor links work with the keyboard, the current item is marked with `aria-current="page"`, and decorative chevrons are hidden from assistive technology. Labels wrap without clipping.
+
+```tsx
+<PageHeader
+  headingLevel={2}
+  title="Property Details"
+  description="Review the property record."
+  breadcrumbs={
+    <Breadcrumbs
+      ancestors={[{ label: 'Properties', to: '/properties' }]}
+      current="Property Details"
+    />
+  }
+  actions={<Button onClick={openEditor}>Edit property</Button>}
+/>
+```
+
+### Pagination
+
+`Pagination` takes a controlled, **one-based** `page`, a `totalPages` count, and an `onPageChange` callback. Use the optional `label` to distinguish multiple pagination landmarks. The caller owns the selected page and the data it displays. For zero or one page, or invalid numeric inputs, the component renders no controls. Current-page and out-of-range selections do not call the callback.
+
+Previous and Next are disabled at their respective boundaries. Numbered buttons have explicit page names and the current one has `aria-current="page"`. For larger totals, the first, last, and nearby pages stay visible. Ellipses are static and have the screen-reader text “Pages omitted.” Controls use the shared button focus styles and wrap onto additional rows on narrow screens.
+
+```tsx
+const [page, setPage] = useState(1)
+
+<Pagination
+  page={page}
+  totalPages={12}
+  onPageChange={setPage}
+  label="Property results pagination"
+/>
+```

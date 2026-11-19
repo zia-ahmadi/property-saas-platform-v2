@@ -1,6 +1,7 @@
 import { Link } from 'react-router'
 import { Building2, ChevronRight, MapPin } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
+import { PageHeader } from '@/components/ui/page-header'
 
 export function PropertiesPage() {
   const properties = [
@@ -29,15 +30,12 @@ export function PropertiesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Properties</h2>
-          <p className="text-sm text-muted-foreground">
-            Manage your enterprise real estate portfolio.
-          </p>
-        </div>
-        <Button>Add Property</Button>
-      </div>
+      <PageHeader
+        headingLevel={2}
+        title="Properties"
+        description="Manage your enterprise real estate portfolio."
+        actions={<Button>Add Property</Button>}
+      />
 
       <div className="grid grid-cols-1 gap-4">
         {properties.map((prop) => (
