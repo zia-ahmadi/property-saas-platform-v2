@@ -14,7 +14,7 @@ const getApiBaseUrl = (): string => {
   try {
     parsedUrl = new URL(url)
   } catch {
-    throw new Error(`VITE_API_BASE_URL "${url}" is not a valid URL`)
+    throw new Error('VITE_API_BASE_URL is not a valid URL')
   }
 
   // Accept only http: and https: protocols
@@ -30,12 +30,12 @@ const getApiBaseUrl = (): string => {
   }
 
   // Reject URLs with query strings or fragments
-  if (parsedUrl.search || parsedUrl.hash) {
+  if (parsedUrl.href.includes('?') || parsedUrl.href.includes('#')) {
     throw new Error('VITE_API_BASE_URL must not contain query strings or fragments')
   }
 
   // Normalize: remove trailing slashes to ensure consistent path joining
-  return url.replace(/\/+$/, '')
+  return parsedUrl.href.replace(/\/+$/, '')
 }
 
 export const API_BASE_URL = getApiBaseUrl()
