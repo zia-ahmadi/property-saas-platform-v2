@@ -12,6 +12,7 @@ import com.propertysaas.propertycore.config.security.browser.BrowserSecurityFilt
 import com.propertysaas.propertycore.config.security.browser.BrowserSecurity;
 import org.springframework.security.web.authentication.logout.LogoutFilter;
 import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.security.oauth2.server.resource.web.DefaultBearerTokenResolver;
 
 @Configuration
 public class SecurityConfig {
@@ -35,10 +36,15 @@ public class SecurityConfig {
                                 "/api/v1/auth/refresh"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/browser-auth/csrf").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/browser-auth/login", "/api/v1/browser-auth/refresh").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/browser-auth/login", "/api/v1/browser-auth/refresh", "/api/v1/browser-auth/logout").permitAll()
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
+                        .bearerTokenResolver(request -> {
+                            if ("POST".equals(request.getMethod()) &&
+                                    (request.getContextPath() + "/api/v1/browser-auth/logout").equals(request.getRequestURI())) return null;
+                            return new DefaultBearerTokenResolver().resolve(request);
+                        })
                         .jwt(jwt -> {})
                 );
 

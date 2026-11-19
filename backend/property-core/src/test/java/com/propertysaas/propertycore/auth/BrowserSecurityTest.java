@@ -20,6 +20,10 @@ class BrowserSecurityTest {
         assertTrue(cookie.startsWith("dev-refresh="));
         assertTrue(cookie.contains("HttpOnly")); assertTrue(cookie.contains("SameSite=Strict"));
         assertFalse(cookie.contains("Secure")); assertTrue(cookie.contains("Path=/"));
+        String cleared = security.clearRefreshCookie().toString();
+        assertTrue(cleared.startsWith("dev-refresh=")); assertTrue(cleared.contains("Max-Age=0"));
+        assertTrue(cleared.contains("HttpOnly")); assertTrue(cleared.contains("SameSite=Strict"));
+        assertTrue(cleared.contains("Path=/")); assertFalse(cleared.contains("Secure"));
     }
 
     @Test

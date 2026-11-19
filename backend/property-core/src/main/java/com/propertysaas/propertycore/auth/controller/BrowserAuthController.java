@@ -3,6 +3,8 @@ package com.propertysaas.propertycore.auth.controller;
 import com.propertysaas.propertycore.auth.dto.LoginRequest;
 import com.propertysaas.propertycore.auth.dto.RefreshTokenRequest;
 import com.propertysaas.propertycore.auth.service.AuthenticationService;
+import com.propertysaas.propertycore.auth.service.BrowserSessionService;
+import com.propertysaas.propertycore.auth.refresh.service.RefreshTokenService;
 import com.propertysaas.propertycore.common.exception.AuthenticationException;
 import com.propertysaas.propertycore.config.security.browser.BrowserSecurity;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,7 +18,11 @@ import org.springframework.web.bind.annotation.*;
 public class BrowserAuthController {
     private final AuthenticationService auth;
     private final BrowserSecurity security;
-    public BrowserAuthController(AuthenticationService auth, BrowserSecurity security) { this.auth = auth; this.security = security; }
+    private final BrowserSessionService sessions;
+    private final RefreshTokenService refreshTokens;
+    public BrowserAuthController(AuthenticationService auth, BrowserSecurity security, BrowserSessionService sessions, RefreshTokenService refreshTokens) {
+        this.auth = auth; this.security = security; this.sessions = sessions; this.refreshTokens = refreshTokens;
+    }
     public record CsrfResponse(String csrfToken) { }
     public record AccessResponse(String accessToken, String tokenType, long expiresIn) { }
 
@@ -40,5 +46,17 @@ public class BrowserAuthController {
         var result = auth.refresh(new RefreshTokenRequest(token));
         return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, security.refreshCookie(result.refreshToken()).toString())
                 .body(new AccessResponse(result.accessToken(), result.tokenType(), result.expiresIn()));
+    }
+
+    @GetMapping("/session")
+    public ResponseEntity<BrowserSessionService.SessionResponse> session() {
+        return ResponseEntity.ok(sessions.currentSession());
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(HttpServletRequest request) {
+        String token = security.uniqueCookie(request, security.refreshCookieName());
+        if (token != null && !token.isBlank()) refreshTokens.revokeFamily(token);
+        return ResponseEntity.noContent().header(HttpHeaders.SET_COOKIE, security.clearRefreshCookie().toString()).build();
     }
 }

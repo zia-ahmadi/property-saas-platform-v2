@@ -63,6 +63,7 @@ public class BrowserSecurity {
     private String csrfCookieName() { return development ? "dev-csrf" : "__Host-csrf"; }
 
     public ResponseCookie refreshCookie(String token) { return cookie(refreshCookieName(), token, refreshLifetime); }
+    public ResponseCookie clearRefreshCookie() { return cookie(refreshCookieName(), "", 0); }
     public ResponseCookie csrfCookie(String token) { return cookie(csrfCookieName(), token, CSRF_LIFETIME); }
     private ResponseCookie cookie(String name, String value, long age) {
         return ResponseCookie.from(name, value).httpOnly(true).secure(!development).sameSite("Strict")
