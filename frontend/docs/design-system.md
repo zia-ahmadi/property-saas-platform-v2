@@ -116,3 +116,41 @@ Compose `TableContainer`, `Table`, `TableHeader`, `TableBody`, `TableRow`, `Tabl
 `StatusBadge` reuses Badge, accepts `tone="neutral" | "success" | "warning" | "destructive"`, and requires a text label as children. Neutral, success, and warning deliberately share the existing `secondary` colors, with circle, check-circle, and warning-triangle icons respectively. Destructive uses the existing destructive variant and alert-circle icon. Icons are decorative; meaningful text must identify the status. No green/amber palette or global color variables are added.
 
 Features map their domain states to these generic tones and labels. Static badges are not live regions by default. Add `role="status"` only when a changing status needs polite announcement; do not make every table badge a live region. Badge's existing composition props remain available, but a custom `render` element must preserve the provided text and semantics.
+
+### Feedback states
+
+Use `Spinner` for a compact indicator and `LoadingState` while a section or collection has no content to show. Both accept a `label` and announce it through a polite status region. Spinner text is visually hidden by default, and its icon spins only when the user allows motion. `LoadingState` shows the label and keeps it outside its busy placeholder region. `Skeleton` is decorative and static. Set its dimensions with classes and use it inside a loading state or an existing region that already announces loading. For background refreshes, keep the displayed content in place and use `aria-busy` on the region being updated when appropriate.
+
+Use `EmptyState` after a successful request returns no content. Supply a title and description and optionally provide a decorative icon and an action. Use `ErrorState` when a section cannot display its content. Its polite announcement includes the title and user-facing description. Use the safe default description or supply authored copy. Keep exceptions, stack traces, server messages, credentials, and response bodies out of user-facing strings. The caller owns retry and passes `retrying` or `retryDisabled` to prevent repeated activation.
+
+```tsx
+<LoadingState
+  label="Loading results…"
+  placeholder={<Skeleton className="h-20 w-full" />}
+/>
+
+<EmptyState
+  title="No results"
+  description="Try adjusting your filters."
+  action={<Button onClick={clearFilters}>Clear filters</Button>}
+/>
+
+<ErrorState
+  title="Results unavailable"
+  description="Check your connection and try again."
+  onRetry={retry}
+  retrying={isRetrying}
+/>
+```
+
+Use `useNotification` for brief feedback about an event, such as completing an action. Prefer an inline error or empty state when the message explains the current screen or the user needs it to continue. The single root `NotificationProvider` supplies the notification viewport. Call `notify` from a component inside it and pass a `variant` of `success`, `error`, `warning`, or `info`. Supply a short title and optional safe description. The returned ID can be passed to `dismiss(id)`.
+
+```tsx
+const { notify } = useNotification()
+
+function handleSaved() {
+  notify({ variant: 'success', title: 'Changes saved' })
+}
+```
+
+Notifications use polite announcements, stay out of the way of the current focus, and provide a labeled close button. Escape dismisses a focused toast. Base UI pauses timed dismissal during hover or keyboard focus. Success and informational messages time out after eight seconds, while warnings and errors require dismissal. The viewport shows the three newest toasts. Older active toasts can reappear when space becomes available, so put essential information inline. Toasts use semantic colors, distinct icons, and accessible variant labels without animation.
