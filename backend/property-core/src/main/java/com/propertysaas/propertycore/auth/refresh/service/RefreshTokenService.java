@@ -3,6 +3,8 @@ package com.propertysaas.propertycore.auth.refresh.service;
 
 import com.propertysaas.propertycore.auth.refresh.dto.RefreshTokenRotationResult;
 import com.propertysaas.propertycore.auth.refresh.entity.RefreshToken;
+import com.propertysaas.propertycore.auth.refresh.entity.RefreshTokenFamily;
+import com.propertysaas.propertycore.auth.refresh.repository.RefreshTokenFamilyRepository;
 import com.propertysaas.propertycore.auth.refresh.repository.RefreshTokenRepository;
 import com.propertysaas.propertycore.common.exception.AuthenticationException;
 import com.propertysaas.propertycore.user.entity.User;
@@ -26,15 +28,18 @@ import java.util.UUID;
 public class RefreshTokenService {
 
     private final RefreshTokenRepository refreshTokenRepository;
+    private final RefreshTokenFamilyRepository familyRepository;
     private final SecureRandom secureRandom = new SecureRandom();
     private final long refreshTokenExpiration;
 
     public RefreshTokenService(
             RefreshTokenRepository refreshTokenRepository,
+            RefreshTokenFamilyRepository familyRepository,
             @Value("${app.jwt.refresh-token-expiration}")
             long refreshTokenExpiration
     ) {
         this.refreshTokenRepository = refreshTokenRepository;
+        this.familyRepository = familyRepository;
         this.refreshTokenExpiration = refreshTokenExpiration;
     }
 
@@ -72,6 +77,7 @@ public class RefreshTokenService {
 
     @Transactional
     public String createToken(User user, UUID familyId) {
+        familyRepository.saveAndFlush(new RefreshTokenFamily(familyId, user));
         String rawToken = generateToken();
         String tokenHash = hashToken(rawToken);
 
@@ -100,7 +106,10 @@ public class RefreshTokenService {
     @Transactional
     public Optional<RefreshToken> findByRawTokenForUpdate(String rawToken) {
         String tokenHash = hashToken(rawToken);
-
+        Optional<UUID> familyId = refreshTokenRepository.findFamilyIdByTokenHash(tokenHash);
+        if (familyId.isEmpty() || familyRepository.findByIdForUpdate(familyId.get()).isEmpty()) {
+            return Optional.empty();
+        }
         return refreshTokenRepository.findByTokenHashForUpdate(tokenHash);
     }
 
@@ -136,8 +145,13 @@ public class RefreshTokenService {
     @Transactional(noRollbackFor = AuthenticationException.class)
     public RefreshTokenRotationResult rotateTokenWithUser(String rawToken) {
 
+        String tokenHash = hashToken(rawToken);
+        UUID familyId = refreshTokenRepository.findFamilyIdByTokenHash(tokenHash)
+                .orElseThrow(() -> new AuthenticationException("Invalid refresh token"));
+        RefreshTokenFamily family = familyRepository.findByIdForUpdate(familyId)
+                .orElseThrow(() -> new AuthenticationException("Invalid refresh token"));
         RefreshToken currentToken = refreshTokenRepository
-                .findByTokenHashForUpdate(hashToken(rawToken))
+                .findByTokenHashForUpdate(tokenHash)
                 .orElseThrow(() ->
                         new AuthenticationException("Invalid refresh token")
                 );
@@ -145,7 +159,11 @@ public class RefreshTokenService {
         Instant now = Instant.now();
 
         // Detect reuse and revoke the entire token family.
+        if (family.isRevoked()) {
+            throw new AuthenticationException("Invalid refresh token");
+        }
         if (currentToken.isRevoked()) {
+            family.revoke(now);
             refreshTokenRepository
                     .findAllByFamilyId(currentToken.getFamilyId())
                     .forEach(token -> token.revoke(now));
@@ -182,5 +200,17 @@ public class RefreshTokenService {
                 user,
                 newRawToken
         );
+    }
+
+    /** Revokes a family by token using the same family-first lock order as rotation. */
+    @Transactional
+    public void revokeFamily(String rawToken) {
+        String hash = hashToken(rawToken);
+        refreshTokenRepository.findFamilyIdByTokenHash(hash).ifPresent(id ->
+                familyRepository.findByIdForUpdate(id).ifPresent(family -> {
+                    Instant now = Instant.now();
+                    family.revoke(now);
+                    refreshTokenRepository.findAllByFamilyId(id).forEach(token -> token.revoke(now));
+                }));
     }
 }

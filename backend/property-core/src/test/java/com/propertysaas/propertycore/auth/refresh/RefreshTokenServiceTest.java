@@ -4,6 +4,8 @@ package com.propertysaas.propertycore.auth.refresh;
 import com.propertysaas.propertycore.auth.refresh.entity.RefreshToken;
 import com.propertysaas.propertycore.auth.refresh.dto.RefreshTokenRotationResult;
 import com.propertysaas.propertycore.auth.refresh.repository.RefreshTokenRepository;
+import com.propertysaas.propertycore.auth.refresh.repository.RefreshTokenFamilyRepository;
+import com.propertysaas.propertycore.auth.refresh.entity.RefreshTokenFamily;
 import com.propertysaas.propertycore.auth.refresh.service.RefreshTokenService;
 import com.propertysaas.propertycore.common.exception.AuthenticationException;
 import com.propertysaas.propertycore.user.entity.User;
@@ -25,16 +27,24 @@ import static org.mockito.Mockito.*;
 class RefreshTokenServiceTest {
 
     private RefreshTokenRepository repository;
+    private RefreshTokenFamilyRepository familyRepository;
     private RefreshTokenService service;
     private User user;
 
     @BeforeEach
     void setUp() {
         repository = mock(RefreshTokenRepository.class);
-        service = new RefreshTokenService(repository, 604800);
+        familyRepository = mock(RefreshTokenFamilyRepository.class);
+        service = new RefreshTokenService(repository, familyRepository, 604800);
 
         user = mock(User.class);
         when(user.getStatus()).thenReturn(UserStatus.ACTIVE);
+        when(repository.findFamilyIdByTokenHash(any())).thenAnswer(invocation -> {
+            String hash = invocation.getArgument(0);
+            return repository.findByTokenHashForUpdate(hash).map(RefreshToken::getFamilyId);
+        });
+        when(familyRepository.findByIdForUpdate(any())).thenAnswer(invocation ->
+                Optional.of(new RefreshTokenFamily(invocation.getArgument(0), user)));
     }
 
     @Test

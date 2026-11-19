@@ -17,6 +17,9 @@ import java.util.UUID;
 public interface RefreshTokenRepository
         extends JpaRepository<RefreshToken, UUID> {
 
+    @Query("SELECT token.familyId FROM RefreshToken token WHERE token.tokenHash = :tokenHash")
+    Optional<UUID> findFamilyIdByTokenHash(@Param("tokenHash") String tokenHash);
+
     Optional<RefreshToken> findByTokenHash(String tokenHash);
 
     List<RefreshToken> findAllByFamilyId(UUID familyId);
