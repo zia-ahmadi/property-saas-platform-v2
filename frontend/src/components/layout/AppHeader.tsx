@@ -1,4 +1,5 @@
 import { matchPath, useLocation } from 'react-router'
+import { MobileNavigation } from './MobileNavigation'
 
 export function AppHeader() {
   const { pathname } = useLocation()
@@ -14,7 +15,10 @@ export function AppHeader() {
 
   return (
     <header className="flex min-h-16 min-w-0 items-center justify-between gap-4 border-b bg-card px-4 py-3 text-card-foreground sm:px-6 lg:px-8">
-      <h1 className="min-w-0 break-words text-lg font-semibold tracking-tight">{title}</h1>
+      <div className="flex min-w-0 items-center gap-3">
+        <MobileNavigation />
+        <h1 className="min-w-0 break-words text-lg font-semibold tracking-tight">{title}</h1>
+      </div>
       {/* Reserved for future account and organization controls. */}
       <div className="flex min-w-0 shrink-0 items-center gap-3" />
     </header>
