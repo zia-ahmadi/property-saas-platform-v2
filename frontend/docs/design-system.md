@@ -78,3 +78,41 @@ The global `:focus-visible` rule adds a solid 2px `foreground` outline with 2px 
 ```
 
 Use existing Button and Badge variants. Prefer `bg-primary text-primary-foreground` to hard-coded colors. `font-heading` uses the shared font stack. Add future semantic tokens to the existing theme blocks and map them once in `@theme inline`; avoid parallel palettes or page-local token definitions. Existing placeholder layouts and status-color classes are preserved and still need component-level accessibility review.
+
+## Shared UI components
+
+Shared primitives live in `src/components/ui/`. They provide presentation, native semantics, and basic interactions; features own domain labels, validation rules, API calls, pending state, and data transformations. Existing pages have not been migrated as part of this addition.
+
+### Forms
+
+`Label`, `Input`, and `Textarea` forward native element props, including React 19 refs, `required`, `disabled`, `value`, `defaultValue`, `aria-invalid`, and `aria-describedby`. Inputs default to text. Textareas retain native multiline behavior and vertical resizing. Both use the original `input` boundary token and the global keyboard-focus outline.
+
+`Field` renders a label, optional description, control, and optional error. Its render function supplies a stable unique control ID, `required`, `disabled`, `aria-invalid`, and description/error IDs. Spread these props onto one input or textarea. `id` on Field selects the control's ID; it is not applied to the wrapper. A visible “(required)” suffix accompanies the native required attribute. Errors use `role="alert"`; features decide when validation runs and supply concise error text.
+
+```tsx
+<Field label="Display name" description="Shown to your team." required error={nameError}>
+  {(controlProps) => (
+    <Input {...controlProps} value={name} onChange={(event) => setName(event.target.value)} />
+  )}
+</Field>
+```
+
+For standalone controls, associate `Label` through `htmlFor` and the control's `id`. If adding external description IDs to a Field control, merge them with the supplied `aria-describedby`; do not replace it. There is no form state or validation library in these wrappers.
+
+### Confirmation dialogs
+
+`ConfirmationDialog` uses the installed Base UI Dialog with the shared Button. Supply a button element as `trigger`, controlled `open` / `onOpenChange`, a title, a description, and `onConfirm`. Customize action text with `confirmLabel` / `cancelLabel`. For irreversible actions, use `destructive`, an explicit action label, and a description of the consequence.
+
+The modal traps focus, blocks background interaction, and initially focuses Cancel. Cancel, Escape, and outside presses dismiss through Base UI; focus returns to the trigger according to its standard behavior. `onCancel` runs only for the explicit cancel button. `onConfirm` does not automatically close the dialog: the owner handles work, errors, and successful dismissal. `loading` disables confirmation, exposes `aria-busy`, and displays `loadingLabel` (default “Confirming…”); `confirmDisabled` disables it independently. During loading, Cancel is disabled and Base UI close requests (including Escape and outside presses) are blocked. The owner can still close the dialog by updating `open`, for example after work finishes. When initially opened while loading, focus falls back to the dialog because both actions are disabled. The component adds no animation or artificial asynchronous operation.
+
+### Tables
+
+Compose `TableContainer`, `Table`, `TableHeader`, `TableBody`, `TableRow`, `TableHead`, `TableCell`, and optional `TableCaption`. They render native table elements. `TableHead` defaults to `scope="col"`; set `scope="row"` for row headers. Name the table with a caption or `aria-label` / `aria-labelledby`.
+
+`TableContainer` is a keyboard-focusable horizontal scroll region; its TypeScript props require an accessible name through `aria-label` or `aria-labelledby`. Supply non-empty text or IDs of existing elements with meaningful text; normal div props and refs remain supported. Keep it inside a `min-w-0` flexible parent so wide content scrolls within the container. Width requirements belong to the consuming feature. Do not put unrelated interactive widgets inside table headings to simulate sorting. Sorting, pagination, filters, empty/loading states, and data access belong to features.
+
+### Status badges
+
+`StatusBadge` reuses Badge, accepts `tone="neutral" | "success" | "warning" | "destructive"`, and requires a text label as children. Neutral, success, and warning deliberately share the existing `secondary` colors, with circle, check-circle, and warning-triangle icons respectively. Destructive uses the existing destructive variant and alert-circle icon. Icons are decorative; meaningful text must identify the status. No green/amber palette or global color variables are added.
+
+Features map their domain states to these generic tones and labels. Static badges are not live regions by default. Add `role="status"` only when a changing status needs polite announcement; do not make every table badge a live region. Badge's existing composition props remain available, but a custom `render` element must preserve the provided text and semantics.
