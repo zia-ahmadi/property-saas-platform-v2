@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router'
-import { AppLayout } from '@/layouts/AppLayout'
+import { AppShell } from '@/layouts/AppShell'
 import { LoginPage } from '@/pages/LoginPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { PropertiesPage } from '@/pages/PropertiesPage'
@@ -12,11 +12,11 @@ export function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Login route outside AppLayout */}
+        {/* Login route outside the application shell */}
         <Route path="/login" element={<LoginPage />} />
 
-        {/* Protected / App Layout routes */}
-        <Route element={<AppLayout />}>
+        {/* Shared dashboard layout */}
+        <Route element={<AppShell />}>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/properties" element={<PropertiesPage />} />
