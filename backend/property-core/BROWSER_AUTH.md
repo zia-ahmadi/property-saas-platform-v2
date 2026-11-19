@@ -1,0 +1,11 @@
+# Browser authentication configuration
+
+Set `BROWSER_CSRF_SECRET` to a dedicated, randomly generated Base64-encoded key of at least 32 bytes and `BROWSER_ALLOWED_ORIGINS` to a comma-separated list of exact HTTPS frontend origins (scheme, host and optional port). Configure the same CSRF key on all instances. Preserve the key across restarts: changing it immediately invalidates outstanding CSRF tokens, so clients must bootstrap again. Rotate it deliberately and coordinate the change across all instances. Never use the JWT signing key as the CSRF key.
+
+Production deployments must explicitly use `app.browser.cookie-mode=production` and must not activate the `development` profile. Production uses `__Host-refresh` and `__Host-csrf` cookies, Secure, HttpOnly, SameSite=Strict, Path=/, without Domain. Local HTTP requires the explicit `development` Spring profile and a separate `BROWSER_DEV_ALLOWED_ORIGINS` allowlist; HTTP origins are limited to localhost or loopback. It uses `dev-refresh` and `dev-csrf` cookies without Secure. Both modes still require the signing secret and origin allowlist.
+
+Bootstrap with a credentialed GET to `/api/v1/browser-auth/csrf`; send the returned token in `X-CSRF-TOKEN` with credentialed login and refresh POST requests. Tokens expire after one hour; re-bootstrap on expiration. A bootstrap replaces the shared CSRF cookie, so tabs must coordinate bootstrap and retry once after a CSRF rejection. Refresh tokens are not returned in browser JSON. Forwarded-header processing is disabled by default. Reverse proxies must remove incoming forwarding headers and set trusted proxy headers themselves; if a deployment deliberately enables forwarding support, restrict trust to those proxies. Origin validation uses the literal Origin header and does not derive trust from forwarded host or scheme.
+
+CSRF tokens are anonymous and bound to the corresponding CSRF cookie; they are not tied to an authenticated user or refresh-token family. All future state-changing endpoints under `/api/v1/browser-auth/` must use the same CSRF and trusted-Origin protection.
+
+SameSite=Strict assumes a same-site deployment. Cookies do not protect against same-origin script compromise; avoid logging Cookie, Set-Cookie, authorization and request bodies at the application, proxy and tracing layers.
