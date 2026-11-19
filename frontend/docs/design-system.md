@@ -54,6 +54,20 @@ Body text uses `text-base leading-relaxed` (1rem, line height 1.625). The root f
 
 Retain Tailwind's default scale (`--spacing: 0.25rem`). Use `gap-*`, `p-*`, `m-*`, and `space-*`: 2 = 0.5rem, 4 = 1rem, 6 = 1.5rem, 8 = 2rem. No custom spacing utilities are introduced.
 
+## Responsive breakpoints
+
+Use Tailwind's mobile-first defaults. Unprefixed utilities apply at all widths, and responsive prefixes apply from their minimum widths upward.
+
+| Prefix | Minimum | Equivalent at a 16 px default |
+| ------ | ------- | ----------------------------- |
+| `sm`   | 40rem   | 640px                         |
+| `md`   | 48rem   | 768px                         |
+| `lg`   | 64rem   | 1024px                        |
+| `xl`   | 80rem   | 1280px                        |
+| `2xl`  | 96rem   | 1536px                        |
+
+The application shell uses the navigation drawer below `md` and the desktop sidebar from `md` upward. Let flexible content wrap and keep horizontal scrolling local to containers such as wide tables.
+
 ## Border radius
 
 `--radius` remains 0.625rem in both themes. Existing mappings: `rounded-sm` 0.375rem, `rounded-md` 0.5rem, `rounded-lg` 0.625rem, `rounded-xl` 0.875rem, `rounded-2xl` 1.125rem, `rounded-3xl` 1.375rem, `rounded-4xl` 1.625rem. Prefer smaller radii for controls and larger ones for surfaces. `rounded-full` remains available for pills.
@@ -82,6 +96,23 @@ Use existing Button and Badge variants. Prefer `bg-primary text-primary-foregrou
 ## Shared UI components
 
 Shared primitives live in `src/components/ui/`. They provide presentation, native semantics, and basic interactions; features own domain labels, validation rules, API calls, pending state, and data transformations. Existing pages have not been migrated as part of this addition.
+
+### Cards
+
+Use `Card` for a bordered surface with the existing `card` and `card-foreground` tokens. Compose optional `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, and `CardFooter` as needed. Each part forwards native element props, refs, and custom classes. `CardTitle` defaults to an `h2` and accepts `headingLevel={3}` or `headingLevel={4}` for nested content. The surface adds no landmark or tab stop. Put native links or buttons inside it for interactions. The footer wraps actions at narrow widths.
+
+```tsx
+<Card>
+  <CardHeader>
+    <CardTitle headingLevel={3}>Record summary</CardTitle>
+    <CardDescription>Review recent changes.</CardDescription>
+  </CardHeader>
+  <CardContent>Two changes available.</CardContent>
+  <CardFooter>
+    <Button onClick={onReview}>Review changes</Button>
+  </CardFooter>
+</Card>
+```
 
 ### Forms
 

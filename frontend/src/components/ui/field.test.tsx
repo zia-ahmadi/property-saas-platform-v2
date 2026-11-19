@@ -117,3 +117,43 @@ it('preserves caller-provided accessibility attributes and refs', () => {
   expect(textarea).toBeRequired()
   expect(ref.current).toBe(textarea)
 })
+
+it('presents and clears caller-controlled validation feedback during keyboard use', async () => {
+  function Example() {
+    const [error, setError] = useState<string>()
+    return (
+      <form
+        onSubmit={(event) => {
+          event.preventDefault()
+          setError('Enter a display name.')
+        }}
+      >
+        <Field label="Display name" description="Shown beside your comments." error={error}>
+          {(props) => <Input {...props} onChange={() => setError(undefined)} />}
+        </Field>
+        <Field label="Locked note" disabled>
+          {(props) => <Textarea {...props} />}
+        </Field>
+        <button type="submit">Validate</button>
+      </form>
+    )
+  }
+
+  const user = userEvent.setup()
+  render(<Example />)
+  const input = screen.getByRole('textbox', { name: 'Display name' })
+  await user.tab()
+  expect(input).toHaveFocus()
+  await user.tab()
+  expect(screen.getByRole('button', { name: 'Validate' })).toHaveFocus()
+  await user.keyboard('{Enter}')
+  expect(screen.getByRole('alert')).toHaveTextContent('Enter a display name.')
+  expect(input).toHaveAttribute('aria-invalid', 'true')
+  expect(input).toHaveAccessibleDescription('Shown beside your comments. Enter a display name.')
+  await user.tab({ shift: true })
+  expect(input).toHaveFocus()
+  await user.keyboard('Ada')
+  expect(input).toHaveAttribute('aria-invalid', 'false')
+  expect(input).toHaveAccessibleDescription('Shown beside your comments.')
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+})
