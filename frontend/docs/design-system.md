@@ -85,7 +85,7 @@ Shared primitives live in `src/components/ui/`. They provide presentation, nativ
 
 ### Forms
 
-`Label`, `Input`, and `Textarea` forward native element props, including React 19 refs, `required`, `disabled`, `value`, `defaultValue`, `aria-invalid`, and `aria-describedby`. Inputs default to text. Textareas retain native multiline behavior and vertical resizing. Both use the original `input` boundary token and the global keyboard-focus outline.
+`Label`, `Input`, and `Textarea` forward native element props, including React 19 refs, `required`, `disabled`, `value`, `defaultValue`, `aria-invalid`, and `aria-describedby`. Inputs default to text. Textareas retain native multiline behavior and vertical resizing. Both use the existing `muted-foreground` token for a higher-contrast boundary and the global keyboard-focus outline.
 
 `Field` renders a label, optional description, control, and optional error. Its render function supplies a stable unique control ID, `required`, `disabled`, `aria-invalid`, and description/error IDs. Spread these props onto one input or textarea. `id` on Field selects the control's ID; it is not applied to the wrapper. A visible “(required)” suffix accompanies the native required attribute. Errors use `role="alert"`; features decide when validation runs and supply concise error text.
 

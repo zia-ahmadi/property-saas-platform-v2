@@ -1,6 +1,6 @@
 import { Toast } from '@base-ui/react/toast'
 import { CircleAlert, CircleCheck, Info, TriangleAlert, X } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { useLayoutEffect, useRef, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import type { NotificationData, NotificationVariant } from '@/components/ui/use-notification'
 
@@ -13,10 +13,49 @@ const variants = {
 
 function NotificationViewport() {
   const { toasts } = Toast.useToastManager<NotificationData>()
+  const previousFocus = useRef<HTMLElement | null>(null)
+  const focusedToast = useRef<HTMLElement | null>(null)
+
+  useLayoutEffect(() => {
+    const toast = focusedToast.current
+    if (
+      !toast ||
+      (toast.isConnected &&
+        !toast.hasAttribute('data-ending-style') &&
+        !toast.hasAttribute('data-limited'))
+    ) {
+      return
+    }
+
+    focusedToast.current = null
+    const { activeElement, body } = toast.ownerDocument
+    // Base UI may already have moved focus to another toast or back to the page.
+    // Restore it only when the focused toast disappears without a focus handoff.
+    if (activeElement === body || toast.contains(activeElement)) {
+      const target = previousFocus.current
+      if (target?.isConnected) target.focus({ preventScroll: true })
+    }
+  }, [toasts])
 
   return (
     <Toast.Portal>
-      <Toast.Viewport className="pointer-events-none fixed inset-x-0 bottom-0 z-50 grid max-h-[50dvh] gap-2 overflow-y-auto p-3 sm:left-auto sm:w-full sm:max-w-sm sm:p-4">
+      <Toast.Viewport
+        onFocusCapture={(event) => {
+          if (
+            event.relatedTarget instanceof HTMLElement &&
+            !event.currentTarget.contains(event.relatedTarget)
+          ) {
+            previousFocus.current = event.relatedTarget
+          }
+          focusedToast.current = event.target.closest<HTMLElement>('[data-slot="notification"]')
+        }}
+        onBlurCapture={(event) => {
+          if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) {
+            focusedToast.current = null
+          }
+        }}
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-50 grid max-h-[50dvh] gap-2 overflow-y-auto p-3 sm:left-auto sm:w-full sm:max-w-sm sm:p-4"
+      >
         {toasts.map((toast) => {
           const variant = toast.data?.variant ?? 'info'
           const { icon: Icon, label } = variants[variant]
@@ -25,6 +64,7 @@ function NotificationViewport() {
             <Toast.Root
               key={toast.id}
               toast={toast}
+              data-slot="notification"
               swipeDirection={[]}
               className="pointer-events-auto grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3 rounded-lg border border-border bg-popover p-3 text-popover-foreground shadow-md data-ending-style:hidden data-limited:hidden"
             >

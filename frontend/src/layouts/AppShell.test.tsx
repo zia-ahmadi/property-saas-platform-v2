@@ -77,11 +77,11 @@ it.each([
 it('opens property units and returns to details within the shared shell', async () => {
   const user = userEvent.setup()
   renderRoute('/properties/prop-101')
-  await user.click(screen.getByRole('button', { name: /Manage Units/ }))
+  await user.click(screen.getByRole('link', { name: /Manage Units/ }))
   expect(
     within(screen.getByRole('main')).getByRole('heading', { name: 'Units Management' }),
   ).toBeInTheDocument()
-  await user.click(screen.getByRole('button', { name: /Back to Property Details/ }))
+  await user.click(screen.getByRole('link', { name: /Back to Property Details/ }))
   expect(
     within(screen.getByRole('main')).getByRole('heading', { name: 'Property Details' }),
   ).toBeInTheDocument()

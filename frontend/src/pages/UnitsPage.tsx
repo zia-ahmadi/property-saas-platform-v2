@@ -1,10 +1,9 @@
-import { useParams, useNavigate } from 'react-router'
+import { Link, useParams } from 'react-router'
 import { Layers, ArrowLeft, Plus, CheckCircle2, AlertCircle } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 
 export function UnitsPage() {
   const { propertyId } = useParams<{ propertyId: string }>()
-  const navigate = useNavigate()
 
   const units = [
     {
@@ -36,21 +35,19 @@ export function UnitsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => navigate(`/properties/${propertyId}`)}
-          className="gap-2"
+        <Link
+          to={`/properties/${propertyId}`}
+          className={buttonVariants({ variant: 'outline', size: 'sm', className: 'gap-2' })}
         >
-          <ArrowLeft className="size-4" /> Back to Property Details
-        </Button>
+          <ArrowLeft aria-hidden="true" className="size-4" /> Back to Property Details
+        </Link>
       </div>
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-2xl font-bold tracking-tight">Units Management</h2>
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-muted font-mono font-medium text-muted-foreground">
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-muted font-mono font-medium text-foreground wrap-anywhere">
               Property: {propertyId}
             </span>
           </div>
@@ -73,10 +70,10 @@ export function UnitsPage() {
           {units.map((unit) => (
             <div
               key={unit.id}
-              className="p-4 px-6 flex items-center justify-between hover:bg-muted/50 transition-colors"
+              className="p-4 flex flex-wrap items-center justify-between gap-3 hover:bg-muted/50 motion-safe:transition-colors sm:px-6"
             >
               <div className="flex items-center gap-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary font-semibold text-sm">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary font-semibold text-sm">
                   {unit.number.split(' ')[1] || 'U'}
                 </div>
                 <div>
@@ -92,13 +89,13 @@ export function UnitsPage() {
                   <div className="flex items-center gap-1.5 justify-end text-xs">
                     {unit.status === 'Occupied' ? (
                       <>
-                        <CheckCircle2 className="size-3.5 text-emerald-600" />
-                        <span className="text-emerald-600 font-medium">Occupied</span>
+                        <CheckCircle2 aria-hidden="true" className="size-3.5" />
+                        <span className="font-medium">Occupied</span>
                       </>
                     ) : (
                       <>
-                        <AlertCircle className="size-3.5 text-amber-600" />
-                        <span className="text-amber-600 font-medium">Vacant</span>
+                        <AlertCircle aria-hidden="true" className="size-3.5" />
+                        <span className="font-medium">Vacant</span>
                       </>
                     )}
                   </div>

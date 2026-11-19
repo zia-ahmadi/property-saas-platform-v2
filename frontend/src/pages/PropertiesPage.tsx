@@ -1,10 +1,8 @@
-import { useNavigate } from 'react-router'
+import { Link } from 'react-router'
 import { Building2, ChevronRight, MapPin } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 
 export function PropertiesPage() {
-  const navigate = useNavigate()
-
   const properties = [
     {
       id: 'prop-101',
@@ -31,7 +29,7 @@ export function PropertiesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Properties</h2>
           <p className="text-sm text-muted-foreground">
@@ -45,37 +43,44 @@ export function PropertiesPage() {
         {properties.map((prop) => (
           <div
             key={prop.id}
-            onClick={() => navigate(`/properties/${prop.id}`)}
-            className="flex items-center justify-between rounded-xl border bg-card p-6 shadow-xs transition-all hover:border-primary/50 hover:shadow-md cursor-pointer"
+            className="flex flex-wrap items-center justify-between gap-4 relative rounded-xl border bg-card p-4 shadow-xs motion-safe:transition-shadow hover:border-primary/50 hover:shadow-md sm:p-6"
           >
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <div className="flex min-w-0 items-center gap-4">
+              <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                 <Building2 className="size-6" />
               </div>
               <div className="space-y-1">
-                <h3 className="font-semibold text-base">{prop.name}</h3>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <MapPin className="size-3.5" />
+                <h3 className="text-base font-semibold">
+                  <Link
+                    to={`/properties/${prop.id}`}
+                    className="before:absolute before:inset-0 hover:underline"
+                  >
+                    {prop.name}
+                  </Link>
+                </h3>
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                  <MapPin aria-hidden="true" className="size-3.5" />
                   <span>{prop.address}</span>
-                  <span>•</span>
+                  <span aria-hidden="true">•</span>
                   <span>{prop.units} Units</span>
-                  <span>•</span>
+                  <span aria-hidden="true">•</span>
                   <span>{prop.occupancy} Occupied</span>
                 </div>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  navigate(`/properties/${prop.id}/units`)
-                }}
+              <Link
+                to={`/properties/${prop.id}/units`}
+                aria-label={`View Units for ${prop.name}`}
+                className={buttonVariants({
+                  variant: 'outline',
+                  size: 'sm',
+                  className: 'relative',
+                })}
               >
                 View Units
-              </Button>
-              <ChevronRight className="size-5 text-muted-foreground" />
+              </Link>
+              <ChevronRight aria-hidden="true" className="size-5 text-muted-foreground" />
             </div>
           </div>
         ))}

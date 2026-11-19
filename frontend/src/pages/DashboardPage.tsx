@@ -31,7 +31,7 @@ export function DashboardPage() {
                 <Icon className="size-4" />
               </div>
               <div className="text-2xl font-bold">{stat.value}</div>
-              <div className="text-xs text-emerald-600 font-medium">{stat.change}</div>
+              <div className="text-xs font-medium text-foreground">{stat.change}</div>
             </div>
           )
         })}

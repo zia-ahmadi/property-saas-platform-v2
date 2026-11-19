@@ -11,7 +11,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/40 p-6">
+    <main className="flex min-h-screen items-center justify-center bg-muted/40 p-6">
       <div className="w-full max-w-md space-y-6 rounded-2xl border bg-card p-8 shadow-lg">
         <div className="flex flex-col items-center text-center space-y-2">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-md">
@@ -23,32 +23,48 @@ export function LoginPage() {
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <label
+              htmlFor="login-email"
+              className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+            >
               Email Address
             </label>
             <div className="relative">
-              <Mail className="absolute left-3 top-3 size-4 text-muted-foreground" />
+              <Mail
+                aria-hidden="true"
+                className="absolute left-3 top-3 size-4 text-muted-foreground"
+              />
               <input
+                id="login-email"
                 type="email"
+                autoComplete="username"
                 required
                 defaultValue="admin@enterprise.com"
-                className="w-full rounded-lg border bg-background px-3 py-2 pl-9 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
+                className="w-full rounded-lg border border-muted-foreground bg-background px-3 py-2 pl-9 text-sm outline-none focus:ring-2 focus:ring-ring/20"
                 placeholder="name@company.com"
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <label
+              htmlFor="login-password"
+              className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+            >
               Password
             </label>
             <div className="relative">
-              <Lock className="absolute left-3 top-3 size-4 text-muted-foreground" />
+              <Lock
+                aria-hidden="true"
+                className="absolute left-3 top-3 size-4 text-muted-foreground"
+              />
               <input
+                id="login-password"
                 type="password"
+                autoComplete="current-password"
                 required
                 defaultValue="••••••••"
-                className="w-full rounded-lg border bg-background px-3 py-2 pl-9 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
+                className="w-full rounded-lg border border-muted-foreground bg-background px-3 py-2 pl-9 text-sm outline-none focus:ring-2 focus:ring-ring/20"
                 placeholder="••••••••"
               />
             </div>
@@ -63,6 +79,6 @@ export function LoginPage() {
           <p>Milestone F1 • Task 4 (Placeholder Authentication View)</p>
         </div>
       </div>
-    </div>
+    </main>
   )
 }
