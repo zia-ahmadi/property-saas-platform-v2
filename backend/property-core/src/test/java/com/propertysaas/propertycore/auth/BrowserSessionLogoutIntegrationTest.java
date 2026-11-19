@@ -80,6 +80,11 @@ class BrowserSessionLogoutIntegrationTest {
         mvc.perform(get("/api/v1/browser-auth/session")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/v1/browser-auth/session").header("Authorization", "Bearer invalid")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/v1/browser-auth/session").header("Authorization", "Bearer " + jwt(UUID.randomUUID(), false))).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/v1/browser-auth/session").header("Authorization", "Bearer " + jwt(UUID.randomUUID(), true))).andExpect(status().isUnauthorized());
+        Instant now = Instant.now();
+        var claims = JwtClaimsSet.builder().issuer(issuer).subject("not-a-uuid").issuedAt(now).expiresAt(now.plusSeconds(600)).build();
+        String malformedSubject = encoder.encode(JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claims)).getTokenValue();
+        mvc.perform(get("/api/v1/browser-auth/session").header("Authorization", "Bearer " + malformedSubject)).andExpect(status().isUnauthorized());
     }
 
     @Test

@@ -125,6 +125,23 @@ class BrowserAuthIntegrationTest {
     }
 
     @Test
+    void rejectsDuplicateAndCommaCombinedCsrfHeaders() throws Exception {
+        MvcResult bootstrap = mvc.perform(get("/api/v1/browser-auth/csrf")).andExpect(status().isOk()).andReturn();
+        String token = mapper.readTree(bootstrap.getResponse().getContentAsString()).get("csrfToken").stringValue();
+        Cookie cookie = bootstrap.getResponse().getCookie("__Host-csrf");
+        assertNotNull(cookie);
+
+        mvc.perform(post("/api/v1/browser-auth/refresh").header("Origin", ORIGIN)
+                        .header("X-CSRF-TOKEN", token).cookie(cookie))
+                .andExpect(status().isUnauthorized());
+        for (String[] values : new String[][]{{token, token}, {token, "invalid"}, {"invalid", token}, {token + ", " + token}}) {
+            mvc.perform(post("/api/v1/browser-auth/refresh").header("Origin", ORIGIN)
+                            .header("X-CSRF-TOKEN", (Object[]) values).cookie(cookie))
+                    .andExpect(status().isForbidden());
+        }
+    }
+
+    @Test
     void unsafeMethodsOnFutureBrowserAuthPathsRequireProtection() throws Exception {
         for (String method : new String[]{"POST", "PUT", "PATCH", "DELETE", "OPTIONS"}) {
             mvc.perform(request(org.springframework.http.HttpMethod.valueOf(method), "/api/v1/browser-auth/future")
@@ -133,6 +150,20 @@ class BrowserAuthIntegrationTest {
         }
         mvc.perform(get("/api/v1/browser-auth/csrf")).andExpect(status().isOk());
         mvc.perform(head("/api/v1/browser-auth/csrf")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void alternatePathRepresentationsDoNotReachBrowserLoginWithoutCsrf() throws Exception {
+        User user = users.save(new User(UUID.randomUUID() + "@example.com", passwords.encode("password-for-test"), "Test", "User"));
+        try {
+            String body = mapper.writeValueAsString(java.util.Map.of("email", user.getEmail(), "password", "password-for-test"));
+            for (String path : new String[]{"/api/v1/browser-auth//login", "/api/v1/browser-auth%2Flogin",
+                    "/api/v1/browser-auth/../browser-auth/login", "/api/v1/browser-auth;foo/login"}) {
+                mvc.perform(post(java.net.URI.create(path)).header("Origin", ORIGIN)
+                                .contentType(MediaType.APPLICATION_JSON).content(body))
+                        .andExpect(status().is4xxClientError()).andExpect(header().doesNotExist("Set-Cookie"));
+            }
+        } finally { users.deleteById(user.getId()); }
     }
 
     private String expiredToken() throws Exception {

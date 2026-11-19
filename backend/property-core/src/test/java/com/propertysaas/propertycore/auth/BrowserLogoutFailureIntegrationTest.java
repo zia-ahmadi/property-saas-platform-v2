@@ -31,4 +31,15 @@ class BrowserLogoutFailureIntegrationTest {
                         .header("X-CSRF-TOKEN", token).cookie(csrf.getResponse().getCookie("__Host-csrf"), new Cookie("__Host-refresh", "test")))
                 .andExpect(status().isInternalServerError()).andExpect(header().doesNotExist("Set-Cookie"));
     }
+
+    @Test
+    void databaseFailureDuringRotationDoesNotReturnTokensOrCookies() throws Exception {
+        var csrf = mvc.perform(get("/api/v1/browser-auth/csrf")).andExpect(status().isOk()).andReturn();
+        String token = mapper.readTree(csrf.getResponse().getContentAsString()).get("csrfToken").stringValue();
+        doThrow(new DataAccessResourceFailureException("database unavailable")).when(refreshTokens).rotateTokenWithUser(anyString());
+        mvc.perform(post("/api/v1/browser-auth/refresh").header("Origin", "https://app.example.test")
+                        .header("X-CSRF-TOKEN", token).cookie(csrf.getResponse().getCookie("__Host-csrf"), new Cookie("__Host-refresh", "test")))
+                .andExpect(status().isInternalServerError()).andExpect(header().doesNotExist("Set-Cookie"))
+                .andExpect(jsonPath("$.accessToken").doesNotExist()).andExpect(jsonPath("$.refreshToken").doesNotExist());
+    }
 }

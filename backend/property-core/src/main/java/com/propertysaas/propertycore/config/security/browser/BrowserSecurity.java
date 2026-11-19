@@ -77,7 +77,10 @@ public class BrowserSecurity {
     }
 
     public boolean validCsrf(HttpServletRequest request) {
-        String header = request.getHeader("X-CSRF-TOKEN");
+        Enumeration<String> headers = request.getHeaders("X-CSRF-TOKEN");
+        if (headers == null || !headers.hasMoreElements()) return false;
+        String header = headers.nextElement();
+        if (headers.hasMoreElements() || header == null || header.indexOf(',') >= 0) return false;
         String cookie = uniqueCookie(request, csrfCookieName());
         if (header == null || cookie == null || header.length() > 256 || cookie.length() > 256 ||
                 !MessageDigest.isEqual(header.getBytes(StandardCharsets.UTF_8), cookie.getBytes(StandardCharsets.UTF_8))) return false;
