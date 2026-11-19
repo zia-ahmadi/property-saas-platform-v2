@@ -16,7 +16,7 @@ The final backend regression test executed 227 tests with zero failures, zero er
 Feature	Description	Status
 Create Unit	Register a unit under an existing property	Completed
 List Units	Retrieve units with pagination	Completed
-Unit Details	Retrieve information about a specific unit	Completed
+Unit Details	Retrieve information about a specific unit	Completed9
 Update Unit	Modify supported unit attributes	Completed
 Unit Availability	Change availability between AVAILABLE and UNAVAILABLE	Completed
 Tenant Isolation	Prevent cross-organization unit access	Completed
