@@ -1,9 +1,11 @@
+import { useOptionalOrganization } from '@/features/organization/context'
 import { Link } from 'react-router'
 import { Building2, ChevronRight, MapPin } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { PageHeader } from '@/components/ui/page-header'
 
 export function PropertiesPage() {
+  const organization = useOptionalOrganization()
   const properties = [
     {
       id: 'prop-101',
@@ -34,7 +36,7 @@ export function PropertiesPage() {
         headingLevel={2}
         title="Properties"
         description="Manage your enterprise real estate portfolio."
-        actions={<Button>Add Property</Button>}
+        actions={organization?.can('PROPERTY_MANAGE') && <Button disabled>Add Property</Button>}
       />
 
       <div className="grid grid-cols-1 gap-4">

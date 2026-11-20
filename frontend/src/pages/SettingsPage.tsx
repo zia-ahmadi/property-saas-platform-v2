@@ -49,7 +49,7 @@ export function SettingsPage() {
                 <h3 className="font-semibold">{section.title}</h3>
               </div>
               <p className="text-sm text-muted-foreground flex-1">{section.desc}</p>
-              <Button variant="outline" size="sm" className="w-full">
+              <Button disabled variant="outline" size="sm" className="w-full">
                 Configure
               </Button>
             </div>

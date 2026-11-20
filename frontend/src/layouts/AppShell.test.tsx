@@ -2,10 +2,20 @@ import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vitest'
 import { AppRouter } from '@/app/router/AppRouter'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+
+vi.mock('@/config/env', () => ({ API_BASE_URL: 'https://api.example.test' }))
+
+vi.mock('@/features/organization/context', () => ({ useOptionalOrganization: () => ({ current: { organizationId: 'test' }, can: () => true, organizations: [], select: () => {}, queryKey: () => ['test-org'], request: async () => ({ status: 'ACTIVE' }) }) }))
+
+vi.mock('@/features/auth/context', () => ({
+  useAuth: () => ({ state: window.location.pathname === '/login' ? { status: 'anonymous' } : { status: 'authenticated', session: { user: { id: '1' }, organizations: [] } }, service: {} }),
+  useOptionalAuth: () => null,
+}))
 
 function renderRoute(path: string) {
   window.history.replaceState(null, '', path)
-  render(<AppRouter />)
+  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><AppRouter /></QueryClientProvider>)
 }
 
 afterEach(() => {

@@ -1,10 +1,11 @@
 import { Building2, LayoutDashboard, Settings } from 'lucide-react'
 import { NavLink } from 'react-router'
+import { useOptionalOrganization } from '@/features/organization/context'
 
 const destinations = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/properties', label: 'Properties', icon: Building2 },
-  { to: '/settings', label: 'Settings', icon: Settings },
+  { to: '/properties', label: 'Properties', icon: Building2, permission: 'PROPERTY_VIEW' as const },
+  { to: '/settings', label: 'Settings', icon: Settings, permission: 'ORGANIZATION_MANAGE' as const },
 ]
 
 interface AppNavigationProps {
@@ -13,9 +14,11 @@ interface AppNavigationProps {
 }
 
 export function AppNavigation({ label = 'Main navigation', onNavigate }: AppNavigationProps) {
+  const organization = useOptionalOrganization()
+  const available = destinations.filter(item => !('permission' in item) || !item.permission || (organization?.can(item.permission) ?? false))
   return (
     <nav aria-label={label} className="flex flex-col gap-1 p-4">
-      {destinations.map(({ to, label, icon: Icon }) => (
+      {available.map(({ to, label, icon: Icon }) => (
         <NavLink
           key={to}
           to={to}

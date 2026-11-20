@@ -1,8 +1,10 @@
+import { useOptionalOrganization } from '@/features/organization/context'
 import { Link, useParams } from 'react-router'
 import { Layers, ArrowLeft, Plus, CheckCircle2, AlertCircle } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
 
 export function UnitsPage() {
+  const organization = useOptionalOrganization()
   const { propertyId } = useParams<{ propertyId: string }>()
 
   const units = [
@@ -55,9 +57,7 @@ export function UnitsPage() {
             Manage leasable units and tenant allocations for this property.
           </p>
         </div>
-        <Button className="gap-2">
-          <Plus className="size-4" /> Add Unit
-        </Button>
+        {organization?.can('PROPERTY_MANAGE') && <Button disabled className="gap-2"><Plus className="size-4" /> Add Unit</Button>}
       </div>
 
       <div className="rounded-xl border bg-card shadow-xs overflow-hidden">

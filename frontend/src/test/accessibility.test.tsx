@@ -26,6 +26,10 @@ import { Textarea } from '@/components/ui/textarea'
 import { useNotification } from '@/components/ui/use-notification'
 import { AppShell } from '@/layouts/AppShell'
 import { LoginPage } from '@/pages/LoginPage'
+
+vi.mock('@/features/organization/context', () => ({ useOptionalOrganization: () => ({ can: () => true }) }))
+
+vi.mock('@/features/auth/context', () => ({ useAuth: () => ({ state: { status: 'anonymous' }, service: {} }), useOptionalAuth: () => null }))
 import { PropertyDetailsPage } from '@/pages/PropertyDetailsPage'
 import { UnitsPage } from '@/pages/UnitsPage'
 import { PropertiesPage } from '@/pages/PropertiesPage'
@@ -94,7 +98,7 @@ describe('accessibility audit', () => {
         <LoginPage />
       </MemoryRouter>,
     )
-    const email = screen.getByLabelText('Email Address')
+    const email = screen.getByLabelText('Email address')
     const password = screen.getByLabelText('Password')
     expect(email).toBeRequired()
     expect(password).toBeRequired()
@@ -103,7 +107,9 @@ describe('accessibility audit', () => {
     await user.tab()
     expect(password).toHaveFocus()
     await user.tab()
-    expect(screen.getByRole('button', { name: 'Sign In to Dashboard' })).toHaveFocus()
+    expect(screen.getByRole('button', { name: 'Show password' })).toHaveFocus()
+    await user.tab()
+    expect(screen.getByRole('button', { name: 'Sign in' })).toHaveFocus()
     await expectAccessible(container)
   })
 
@@ -128,8 +134,7 @@ describe('accessibility audit', () => {
     await user.tab()
     await user.keyboard('{Enter}')
     expect(screen.getByRole('main')).toHaveFocus()
-    await user.tab()
-    expect(screen.getByRole('button', { name: 'Add Property' })).toHaveFocus()
+    expect(screen.getByRole('button', { name: 'Add Property' })).toBeDisabled()
     await user.tab()
     expect(details).toHaveFocus()
     await user.keyboard('{Enter}')
