@@ -190,6 +190,20 @@ public ResponseEntity<ErrorResponse> handleBadRequestException(
     }
 
 
+    // Preserve HTTP 405 and Allow headers for read-only endpoints.
+    @ExceptionHandler(org.springframework.web.HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMethodNotSupported(
+            org.springframework.web.HttpRequestMethodNotSupportedException exception,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(exception.getStatusCode())
+                .headers(exception.getHeaders())
+                .body(new ErrorResponse(
+                        Instant.now(), 405, "Method Not Allowed",
+                        "This request method is not supported.", request.getRequestURI()
+                ));
+    }
+
     // Handle unexpected exceptions (HTTP 500)
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGlobalException(
