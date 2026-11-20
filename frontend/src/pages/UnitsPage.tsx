@@ -122,6 +122,7 @@ function UnitWorkspace({
       }
       // Invalidate captured scope even after navigation; never write old response data.
       await Promise.all([
+        client.invalidateQueries({ queryKey: org.queryKey(['dashboard']) }),
         client.invalidateQueries({ queryKey: unitsKey }),
         client.invalidateQueries({ queryKey: org.queryKey(['unit', propertyId]) }),
         client.invalidateQueries({ queryKey: propertyKey }),
@@ -130,6 +131,7 @@ function UnitWorkspace({
         navigate(`${route}/${result.id}`, { state: { saved: true } })
     },
     onError: () => {
+      void client.invalidateQueries({ queryKey: org.queryKey(['dashboard']) })
       if (active.current) {
         setOpen(false)
         void client.invalidateQueries({ queryKey: propertyKey })

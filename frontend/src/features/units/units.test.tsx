@@ -104,6 +104,7 @@ it('recovers when the final page becomes empty', async () => {
   expect(await screen.findByText('Page 1 of 1 · 1 units')).toBeInTheDocument()
 })
 it('creates only allowed DTO fields', async () => {
+  const invalidation = vi.spyOn(QueryClient.prototype, 'invalidateQueries')
   show('/properties/p/units/new')
   await userEvent.type(await screen.findByLabelText('Unit number *'), ' A-102 ')
   await userEvent.click(screen.getByRole('button', { name: 'Save unit' }))
@@ -114,6 +115,7 @@ it('creates only allowed DTO fields', async () => {
     }),
   )
   expect(await screen.findByRole('heading', { name: 'Unit details' })).toBeInTheDocument()
+  expect(invalidation).toHaveBeenCalledWith({ queryKey: ['organization', 'org', 'dashboard'] })
 })
 it('edits attributes without sending availability or IDs', async () => {
   show('/properties/p/units/u/edit')
@@ -132,6 +134,7 @@ it('edits attributes without sending availability or IDs', async () => {
   )
 })
 it.each(['AVAILABLE', 'UNAVAILABLE'])('confirms transition from %s', async (status) => {
+  const invalidation = vi.spyOn(QueryClient.prototype, 'invalidateQueries')
   let current = status
   mocks.request.mockImplementation(async (method, path, body) => {
     if (path === 'properties/p') return property
@@ -144,6 +147,7 @@ it.each(['AVAILABLE', 'UNAVAILABLE'])('confirms transition from %s', async (stat
   expect(mocks.request.mock.calls.some((call) => call[0] === 'patch')).toBe(false)
   await userEvent.click(screen.getByRole('button', { name: 'Change availability' }))
   expect(await screen.findByText(`Availability: ${target}`)).toBeInTheDocument()
+  expect(invalidation).toHaveBeenCalledWith({ queryKey: ['organization', 'org', 'dashboard'] })
 })
 it('prevents all manual occupancy transitions', async () => {
   mocks.request.mockImplementation(async (_m, path) =>

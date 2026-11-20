@@ -1,54 +1,203 @@
-import { Building2, Users, DollarSign, Wrench, ArrowUpRight } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { useNavigate } from 'react-router'
+import { useQuery } from '@tanstack/react-query'
+import { Link } from 'react-router'
+import { useOrganization } from '@/features/organization/context'
+import { dashboardSummary, dashboardError, type DashboardSummary } from '@/features/dashboard/api'
+import { Button, buttonVariants } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { LoadingState } from '@/components/ui/loading-state'
+import { Skeleton } from '@/components/ui/skeleton'
+import { ErrorState } from '@/components/ui/error-state'
+import { EmptyState } from '@/components/ui/empty-state'
 
 export function DashboardPage() {
-  const navigate = useNavigate()
-
-  const stats = [
-    { label: 'Total Properties', value: '12', icon: Building2, change: '+2 this month' },
-    { label: 'Active Leases', value: '148', icon: Users, change: '94% occupancy' },
-    { label: 'Monthly Revenue', value: '$284,500', icon: DollarSign, change: '+12.4% YoY' },
-    { label: 'Open Maintenance', value: '7', icon: Wrench, change: '2 high priority' },
-  ]
-
+  const org = useOrganization()
+  const permitted = !!org.current && !org.forbidden && org.can('PROPERTY_VIEW')
+  const query = useQuery({
+    queryKey: org.queryKey(['dashboard', 'summary']),
+    queryFn: async ({ signal }) =>
+      dashboardSummary(
+        await org.request<DashboardSummary>('get', 'dashboard/summary', undefined, { signal }),
+      ),
+    enabled: permitted,
+    retry: false,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
+  })
+  const data = query.data
   return (
-    <div className="space-y-8">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">Enterprise Portfolio Dashboard</h2>
-        <p className="text-sm text-muted-foreground">
-          Overview of multi-tenant property operations and financials.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat) => {
-          const Icon = stat.icon
-          return (
-            <div key={stat.label} className="rounded-xl border bg-card p-6 shadow-xs space-y-2">
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-sm font-medium">{stat.label}</span>
-                <Icon className="size-4" />
-              </div>
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <div className="text-xs font-medium text-foreground">{stat.change}</div>
-            </div>
-          )
-        })}
-      </div>
-
-      <div className="rounded-xl border bg-card p-6 shadow-xs space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-base font-semibold">Quick Navigation & Routing Test</h3>
-          <Button size="sm" onClick={() => navigate('/properties')} className="gap-1.5">
-            View Properties <ArrowUpRight className="size-4" />
-          </Button>
+    <div className="min-w-0 space-y-6">
+      <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-2xl font-bold tracking-tight">Enterprise Portfolio Dashboard</h2>
+          <p className="wrap-anywhere text-muted-foreground">
+            {org.current?.organizationName ?? 'Selected organization'} · Property and unit overview
+          </p>
         </div>
-        <p className="text-sm text-muted-foreground">
-          React Router is successfully mounted. Use the sidebar to navigate between properties,
-          property details, units, and settings without full-page reloads.
-        </p>
+        {permitted && (
+          <Button
+            variant="outline"
+            disabled={query.isFetching}
+            onClick={() => void query.refetch()}
+          >
+            {query.isFetching ? 'Refreshing…' : 'Refresh dashboard'}
+          </Button>
+        )}
       </div>
+      {!permitted ? (
+        <p role="status">
+          Portfolio widgets require an active organization and property viewing permission.
+        </p>
+      ) : (
+        <>
+          {query.isPending && (
+            <LoadingState
+              label="Loading portfolio summary…"
+              placeholder={
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                  {Array.from({ length: 7 }, (_, index) => (
+                    <Skeleton key={index} className="h-28 w-full" />
+                  ))}
+                </div>
+              }
+            />
+          )}
+          {query.isError && (
+            <ErrorState
+              title="Dashboard unavailable"
+              description={dashboardError(query.error)}
+              onRetry={() => void query.refetch()}
+              retrying={query.isFetching}
+            />
+          )}
+          {data && !query.isError && (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Counts include archived properties and their units. Availability reflects the stored
+                unit status, including units in archived properties.
+              </p>
+              <dl
+                aria-label="Portfolio totals"
+                className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
+              >
+                {(
+                  [
+                    ['Total properties', data.totalProperties],
+                    ['Active properties', data.activeProperties],
+                    ['Archived properties', data.archivedProperties],
+                    ['Total units', data.totalUnits],
+                    ['Available units', data.availableUnits],
+                    ['Unavailable units', data.unavailableUnits],
+                    ['Occupied units', data.occupiedUnits],
+                  ] as const
+                ).map(([label, value]) => (
+                  <Card key={label}>
+                    <dt className="text-sm text-muted-foreground">{label}</dt>
+                    <dd
+                      className="wrap-anywhere text-3xl font-semibold tabular-nums"
+                      aria-label={`${label}: ${value}`}
+                      data-metric={label}
+                    >
+                      {value.toLocaleString()}
+                    </dd>
+                  </Card>
+                ))}
+              </dl>
+              {data.totalProperties === 0 && (
+                <EmptyState
+                  title="Your portfolio is empty"
+                  description={
+                    org.can('PROPERTY_MANAGE')
+                      ? 'Add your first property, then create units within it.'
+                      : 'No properties have been added to this organization. A property manager can add them.'
+                  }
+                />
+              )}
+              <section
+                aria-labelledby="availability-heading"
+                className="min-w-0 space-y-4 rounded-xl border bg-card p-4 sm:p-6"
+              >
+                <h3 id="availability-heading" className="text-lg font-semibold">
+                  Unit availability
+                </h3>
+                {data.totalUnits === 0 ? (
+                  <p>No units yet. Open a property to view or add its units.</p>
+                ) : (
+                  <>
+                    <div
+                      aria-hidden="true"
+                      className="flex h-5 w-full overflow-hidden rounded bg-muted"
+                    >
+                      {[
+                        { count: data.availableUnits, color: 'bg-green-600' },
+                        { count: data.unavailableUnits, color: 'bg-amber-500' },
+                        { count: data.occupiedUnits, color: 'bg-blue-600' },
+                      ].map((segment, index) => (
+                        <span
+                          key={index}
+                          className={segment.color}
+                          style={{ width: `${(segment.count / data.totalUnits) * 100}%` }}
+                        />
+                      ))}
+                    </div>
+                    <ul
+                      aria-label="Unit availability counts"
+                      className="flex min-w-0 flex-wrap gap-x-6 gap-y-3"
+                    >
+                      <li>
+                        <span
+                          aria-hidden="true"
+                          className="mr-2 inline-block size-3 rounded bg-green-600"
+                        />
+                        AVAILABLE: {data.availableUnits.toLocaleString()}
+                      </li>
+                      <li>
+                        <span
+                          aria-hidden="true"
+                          className="mr-2 inline-block size-3 rounded bg-amber-500"
+                        />
+                        UNAVAILABLE: {data.unavailableUnits.toLocaleString()}
+                      </li>
+                      <li>
+                        <span
+                          aria-hidden="true"
+                          className="mr-2 inline-block size-3 rounded bg-blue-600"
+                        />
+                        OCCUPIED: {data.occupiedUnits.toLocaleString()}
+                      </li>
+                    </ul>
+                  </>
+                )}
+                <p className="text-sm text-muted-foreground">
+                  AVAILABLE and UNAVAILABLE are managed within a property. Occupancy is controlled
+                  through lease management. Archived properties remain read-only.
+                </p>
+              </section>
+            </>
+          )}
+          <section
+            aria-labelledby="quick-navigation-heading"
+            className="space-y-3 rounded-xl border bg-card p-4 sm:p-6"
+          >
+            <h3 id="quick-navigation-heading" className="text-lg font-semibold">
+              Quick navigation
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Open a property to view its details, units and availability.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <Link className={buttonVariants({ variant: 'outline' })} to="/properties">
+                View Properties
+              </Link>
+              {org.can('PROPERTY_MANAGE') && (
+                <Link className={buttonVariants()} to="/properties/new">
+                  Add property
+                </Link>
+              )}
+            </div>
+          </section>
+        </>
+      )}
     </div>
   )
 }

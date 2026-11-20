@@ -55,3 +55,49 @@ For Chrome, start the backend with `SERVER_PORT=8085`, `SPRING_PROFILES_ACTIVE=d
 The backend has no unit delete, filtering, version/ETag or lease-assignment contract here. Concurrent attribute edits follow the existing backend update semantics; occupancy and archive conflicts are enforced by the server. Parent archive changes become visible on refresh/focus, polling or the next write, rather than via live push. Browser coverage uses owners in separate organizations; STAFF controls and stale organization switching are covered by component/F3 tests and backend authorization tests. No backend changes or migrations were needed for F5.
 
 F5 validation on 2026-11-20: all 256 frontend tests across 23 files passed, including 32 unit-management cases; TypeScript, ESLint, production build and `git diff --check` passed. The selected PostgreSQL suite passed 107 tests with no skips. The Chrome harness passed all 13 checks against the dedicated F5 database. Temporary validation servers were stopped after the browser run; generated artifacts and test data are excluded from Git.
+
+## Dashboard and navigation (F6)
+
+The dashboard uses `GET /api/v1/organizations/{organizationId}/dashboard/summary` through the existing authenticated organization transport. Its non-paginated response contains seven nonnegative integer counts:
+
+```json
+{
+  "totalProperties": 3,
+  "activeProperties": 2,
+  "archivedProperties": 1,
+  "totalUnits": 110,
+  "availableUnits": 106,
+  "unavailableUnits": 2,
+  "occupiedUnits": 2
+}
+```
+
+These values illustrate the contract; the UI always uses API data. Properties include ACTIVE and ARCHIVED. Units include all units belonging to those properties; AVAILABLE, UNAVAILABLE and OCCUPIED counts use their stored statuses. An AVAILABLE unit under an archived property still contributes to availableUnits, although it cannot be managed. These counts do not imply market availability, leases, revenue or utilization.
+
+`totalProperties = activeProperties + archivedProperties` and `totalUnits = availableUnits + unavailableUnits + occupiedUnits`. Empty organizations return all zeros. Properties are aggregated separately to avoid multiplication by joined units. One PostgreSQL statement scopes properties by organization and aggregates their units using a single MVCC snapshot; counters reconcile even during concurrent commits, and uncommitted changes are excluded. Pagination does not affect counts. Existing `properties(organization_id)` and `units(property_id)` indexes support the query; no migration, extra index, reporting service or per-property query loop was needed.
+
+The endpoint resolves authenticated organization context and requires PROPERTY_VIEW before aggregation. All current active roles (OWNER, ADMIN, MANAGER, STAFF) have this permission. Missing/inactive membership, suspended organization/user and cross-tenant requests are denied; unauthenticated requests return 401. The endpoint accepts no writes. Unsupported methods return 405 with the Allow header, preserved by the shared exception handler.
+
+Seven summary cards and the availability bar share one response. The bar has an accessible text legend with exact counts; there are no percentages or charting dependencies. The frontend rejects unsafe, negative or non-reconciling counters. Loading skeletons, empty organization/unit guidance and error/retry states replace demonstration statistics. Read-only members can navigate to properties; only PROPERTY_MANAGE members see Add property. Forbidden state hides cached metrics, and backend authorization remains authoritative.
+
+Quick navigation opens Properties → property details → Manage Units → unit details. Shared breadcrumbs in AppShell connect nested property/unit pages to Dashboard, Properties and their parent resources. Existing sidebar/mobile navigation and React Router history remain in use. Archived properties retain F5 read-only behavior. The card grid uses one column on mobile, two on tablet and four on wide screens. Account/organization controls wrap rather than overflowing mobile viewports.
+
+The summary key includes verified user identity, organization and role before `dashboard/summary`. F3 cancellation, cache clearing and stale-response protection remain in effect. The freshness window is 30 seconds, with stale mount/focus refresh and explicit refresh. Property create/edit/archive and unit create/edit/availability operations invalidate the captured organization's dashboard prefix on success and failure, including uncertain network outcomes. Active observers refetch; inactive summaries refetch on the next visit. Normal renders and quick revisits to fresh data do not repeatedly request aggregates. Other users' changes appear on stale mount/focus or explicit refresh; no live push is provided.
+
+The backend has no core audit/event stream or secure activity API. Quick navigation replaces recent activity; F6 does not invent events or introduce an event-tracking subsystem. Financial metrics, occupancy assignment and filtered unit-list routes remain outside this milestone. Permissions are verified per request, rather than continuously between requests.
+
+### F6 verification
+
+From `frontend`, run `npx tsc -b`, `npm test -- --maxWorkers=2`, `npm run lint`, and `npm run build`. Tests cover summary rendering, empty/loading/error/retry states, response validation, availability text/chart structure, permission revocation, read-only controls, identity/organization changes, late responses, navigation and an axe audit. Existing property/unit workflow tests assert summary invalidation. Breadcrumb tests exercise parent links and browser back/forward. Real layout checks run in Chrome because jsdom cannot measure overflow or contrast.
+
+Configure a dedicated PostgreSQL database/login using the existing backend environment variables described above. From `backend/property-core`, run:
+
+```sh
+./mvnw -o '-Dtest=DashboardSummaryIntegrationTest,Unit*Test,Property*Test' test
+```
+
+Dashboard integration tests use real PostgreSQL queries and isolated fixtures: all existing roles, empty counts, more records than page limits, archived units in every status, properties without units, tenant isolation, inactive memberships/organization/user, unsupported writes and committed/uncommitted changes across separate connections. Cleanup deletes only those fixtures.
+
+For Chrome, start the dedicated backend with `SERVER_PORT=8086`, the development profile and `BROWSER_DEV_ALLOWED_ORIGINS=http://localhost:5191`. Start Vite using `VITE_API_BASE_URL=http://localhost:8086 npm run dev -- --host localhost --port 5191 --strictPort`. From the repository root, run `node frontend/scripts/dashboard-browser-integration.mjs`; `F6_API_URL` and `F6_APP_URL` override the defaults. The harness registers unique users and changes only their own property/units. It captures summary response bodies through Chrome's debugging protocol and compares all seven rendered counters without extracting or persisting access tokens. Checks cover empty/populated dashboards, property/unit creation, availability changes, archive inclusion, navigation/history, 360/768/1440-pixel layout and second-tenant isolation. F3 requires sign-in after full reload, so navigation stays within the application. Multi-membership organization switching is covered by component/F3 tests; the browser uses separate tenant accounts.
+
+F6 validation on 2026-11-20: all 272 frontend tests across 24 files passed; TypeScript, ESLint, production build and `git diff --check` passed. All 162 selected PostgreSQL-backed backend tests passed with no skips, including 12 dashboard integration cases. Chrome passed 31 checks against the dedicated F6 database, including all seven counters matching intercepted API responses and overflow checks at 360, 768 and 1440 pixels. Temporary validation servers were stopped afterward. Test databases, logs, generated files and secrets are excluded from Git.

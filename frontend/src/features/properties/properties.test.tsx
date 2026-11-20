@@ -26,10 +26,12 @@ describe('property workflows', () => {
     expect(mocks.request).toHaveBeenLastCalledWith('get', 'properties', undefined, expect.objectContaining({ params: { page: 1, size: 10 } }))
   })
   it('creates a property with validated backend fields', async () => {
+    const invalidation = vi.spyOn(QueryClient.prototype, 'invalidateQueries')
     mocks.request.mockResolvedValue(property); show('/properties/new'); const user = userEvent.setup()
     await user.type(screen.getByLabelText('Property name'), 'Property One'); await user.type(screen.getByLabelText('Address line 1'), 'Main street'); await user.type(screen.getByLabelText('City'), 'London'); await user.type(screen.getByLabelText('Country code'), 'gb')
     await user.click(screen.getByRole('button', { name: 'Save property' }))
     await waitFor(() => expect(mocks.request).toHaveBeenCalledWith('post', 'properties', expect.objectContaining({ name: 'Property One', countryCode: 'GB', addressLine2: null })))
+    await waitFor(() => expect(invalidation).toHaveBeenCalledWith({ queryKey: ['organization', 'user', 'org', 'dashboard'] }))
   })
   it('loads and updates a property', async () => {
     mocks.request.mockResolvedValue(property); show('/properties/id-1/edit'); const name = await screen.findByLabelText('Property name'); expect(name).toHaveValue('Property One')
@@ -37,9 +39,11 @@ describe('property workflows', () => {
     await waitFor(() => expect(mocks.request).toHaveBeenCalledWith('patch', 'properties/id-1', expect.objectContaining({ name: 'Updated' })))
   })
   it('requires confirmation before archive', async () => {
+    const invalidation = vi.spyOn(QueryClient.prototype, 'invalidateQueries')
     mocks.request.mockImplementation(async method => method === 'patch' ? { ...property, status: 'ARCHIVED' } : property); show('/properties/id-1')
     const user = userEvent.setup(); await user.click(await screen.findByRole('button', { name: 'Archive property' })); expect(mocks.request).not.toHaveBeenCalledWith('patch', 'properties/id-1/archive')
     await user.click(screen.getByRole('button', { name: /^Archive$/ })); await waitFor(() => expect(mocks.request).toHaveBeenCalledWith('patch', 'properties/id-1/archive'))
+    await waitFor(() => expect(invalidation).toHaveBeenCalledWith({ queryKey: ['organization', 'user', 'org', 'dashboard'] }))
   })
   it('shows an archive failure after dismissing the confirmation', async () => {
     mocks.request.mockImplementation(async method => { if (method === 'patch') throw new ApiError({ status: 500, message: 'internal detail' }); return property })

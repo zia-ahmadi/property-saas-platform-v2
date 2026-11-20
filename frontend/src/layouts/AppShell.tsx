@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import { PortfolioBreadcrumbs } from '@/components/layout/PortfolioBreadcrumbs'
 import { Outlet } from 'react-router'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { AppSidebar } from '@/components/layout/AppSidebar'
@@ -25,6 +26,7 @@ export function AppShell() {
           tabIndex={-1}
           className="min-w-0 flex-1 overflow-x-auto p-4 sm:p-6 lg:p-8"
         >
+          <PortfolioBreadcrumbs />
           <Outlet />
         </main>
       </div>

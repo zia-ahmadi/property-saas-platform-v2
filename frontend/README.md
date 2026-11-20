@@ -1,4 +1,8 @@
-# React + TypeScript + Vite
+# Property SaaS frontend
+
+See [property, unit, dashboard and navigation integration](PROPERTY_MANAGEMENT.md) for API contracts, counting semantics and verification. See [authentication](AUTHENTICATION.md) for session and organization security.
+
+## Tooling
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
