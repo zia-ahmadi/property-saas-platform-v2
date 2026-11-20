@@ -39,6 +39,9 @@ public class SecurityConfig {
                                 "/api/v1/auth/refresh"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/browser-auth/csrf").permitAll()
+                        // Container/orchestrator readiness probe. Only the
+                        // status is exposed (show-details defaults to never).
+                        .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/browser-auth/login", "/api/v1/browser-auth/refresh", "/api/v1/browser-auth/logout").permitAll()
                         .anyRequest().authenticated()
                 )

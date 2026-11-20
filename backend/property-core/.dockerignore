@@ -1,0 +1,16 @@
+# Build context hygiene for the property-core image.
+
+# Build output (rebuilt inside the image)
+target
+
+# Maven wrapper / repository tooling are not needed by the image build
+.mvn
+mvnw
+mvnw.cmd
+HELP.md
+down
+.gitignore
+.gitattributes
+
+# VCS metadata
+.git
