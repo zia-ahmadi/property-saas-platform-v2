@@ -1,76 +1,22 @@
-import { Link, useParams } from 'react-router'
-import { Building2, MapPin, Layers, ArrowLeft, ExternalLink } from 'lucide-react'
-import { Breadcrumbs } from '@/components/ui/breadcrumbs'
-import { buttonVariants } from '@/components/ui/button'
+import { useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Link, useLocation, useParams } from 'react-router'
+import { useOrganization } from '@/features/organization/context'
+import type { Property } from '@/features/properties/api'
+import { propertyError } from '@/features/properties/errors'
+import { Button, buttonVariants } from '@/components/ui/button'
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog'
 
 export function PropertyDetailsPage() {
-  const { propertyId } = useParams<{ propertyId: string }>()
-
-  return (
-    <div className="space-y-6">
-      <Breadcrumbs
-        ancestors={[{ label: 'Properties', to: '/properties' }]}
-        current="Property Details"
-      />
-      <div className="flex min-w-0 items-center gap-4">
-        <Link
-          to="/properties"
-          className={buttonVariants({ variant: 'outline', size: 'sm', className: 'gap-2' })}
-        >
-          <ArrowLeft aria-hidden="true" className="size-4" /> Back to Properties
-        </Link>
-      </div>
-
-      <div className="rounded-xl border bg-card p-4 sm:p-8 shadow-xs space-y-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex min-w-0 items-center gap-4">
-            <div className="flex size-12 shrink-0 items-center sm:size-16 justify-center rounded-2xl bg-primary/10 text-primary">
-              <Building2 className="size-8" />
-            </div>
-            <div className="min-w-0 space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-2xl font-bold tracking-tight">Property Details</h2>
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-mono font-medium wrap-anywhere">
-                  ID: {propertyId}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <MapPin aria-hidden="true" className="size-4 shrink-0" />
-                <span>100 Financial Way, New York, NY (Enterprise Commercial Portfolio)</span>
-              </div>
-            </div>
-          </div>
-
-          <Link
-            to={`/properties/${propertyId}/units`}
-            className={buttonVariants({ className: 'gap-2' })}
-          >
-            <Layers aria-hidden="true" className="size-4" /> Manage Units
-            <ExternalLink aria-hidden="true" className="size-3.5" />
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t">
-          <div className="min-w-0 space-y-1">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Total Units
-            </span>
-            <p className="text-xl font-bold">42 Units</p>
-          </div>
-          <div className="min-w-0 space-y-1">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Occupancy Rate
-            </span>
-            <p className="text-xl font-bold text-emerald-600">95%</p>
-          </div>
-          <div className="min-w-0 space-y-1">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Tenant Isolation
-            </span>
-            <p className="text-xl font-bold font-mono text-primary">Organization Scoped</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
+  const { propertyId = '' } = useParams()
+  const location = useLocation()
+  const saved = (location.state as { saved?: string } | null)?.saved
+  const org = useOrganization(); const client = useQueryClient(); const [open, setOpen] = useState(false)
+  const query = useQuery({ queryKey: org.queryKey(['property', propertyId]), queryFn: ({ signal }) => org.request<Property>('get', `properties/${propertyId}`, undefined, { signal }), retry: false })
+  const archive = useMutation({ mutationFn: () => org.request<Property>('patch', `properties/${propertyId}/archive`), onError: () => setOpen(false), onSuccess: async () => { setOpen(false); await client.invalidateQueries({ queryKey: org.queryKey(['properties']) }); await client.invalidateQueries({ queryKey: org.queryKey(['property', propertyId]) }) } })
+  return <div className="space-y-5"><Link className={buttonVariants({ variant: 'outline' })} to="/properties">Back to Properties</Link><h2 className="text-2xl font-bold">Property Details</h2>{(saved === 'created' || saved === 'updated') && <p role="status">Property {saved} successfully.</p>}
+    {query.isPending && <p role="status">Loading property…</p>}{query.isError && <p role="alert">{propertyError(query.error)}</p>}
+    {query.data && <section className="space-y-4 rounded-xl border bg-card p-6"><h3 className="text-xl font-semibold">{query.data.name}</h3><p>{query.data.addressLine1}{query.data.addressLine2 && `, ${query.data.addressLine2}`}, {query.data.city}, {query.data.countryCode}</p><p>Type: {query.data.propertyType.replace('_', ' ')} · Status: {query.data.status}</p><Link className="underline" to={`/properties/${propertyId}/units`}>Manage Units (preview)</Link>
+    {org.can('PROPERTY_MANAGE') && query.data.status === 'ACTIVE' && <div className="flex flex-wrap gap-3"><Link className={buttonVariants({ variant: 'outline' })} to={`/properties/${propertyId}/edit`}>Edit property</Link><ConfirmationDialog trigger={<Button variant="destructive">Archive property</Button>} open={open} onOpenChange={setOpen} title="Archive property?" description="This marks the property as archived. It remains in the property list and is not deleted." confirmLabel="Archive" loading={archive.isPending} onConfirm={() => archive.mutate()} destructive /></div>}{archive.isError && <p role="alert">{propertyError(archive.error)}</p>}</section>}
+  </div>
 }

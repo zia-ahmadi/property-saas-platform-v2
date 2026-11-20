@@ -11,6 +11,7 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
   const [selected, setSelected] = useState<string>()
   const [deniedScope, setDeniedScope] = useState<{ identity: string; id: string; session: object }>()
   const version = useRef(0)
+  const selectedRef = useRef<string | undefined>(undefined)
   const organizations = state.status === 'authenticated' ? state.session.organizations : []
   const current = organizations.find(org => org.organizationId === selected) ?? organizations[0]
   const identity = state.status === 'authenticated' ? state.session.user.id : undefined
@@ -21,6 +22,7 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
     select(id) {
       if (!organizations.some(org => org.organizationId === id) || id === current?.organizationId) return
       version.current++
+      selectedRef.current = id
       setDeniedScope(undefined)
       void queryClient.cancelQueries().then(() => queryClient.clear())
       setSelected(id)
@@ -29,6 +31,10 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
     queryKey: key => ['organization', identity, current?.organizationId, current?.role, ...key],
     async request<T>(method: 'get' | 'post' | 'put' | 'patch' | 'delete', path: string, body?: unknown, options?: RequestOptions): Promise<T> {
       if (!current || !identity) throw new Error('Organization required')
+      const verified = service.getSnapshot()
+      if (verified.status !== 'authenticated' || verified.session.user.id !== identity) throw new Error('Authentication changed')
+      const selectedMembership = verified.session.organizations.find(org => org.organizationId === selectedRef.current) ?? verified.session.organizations[0]
+      if (selectedMembership?.organizationId !== current.organizationId) throw new Error('Organization changed')
       const capturedVersion = version.current
       try {
         const result = await service.request<T>(method, `api/v1/organizations/${current.organizationId}${path ? `/${path}` : ''}`, body, options)

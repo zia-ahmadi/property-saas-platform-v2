@@ -1,90 +1,23 @@
-import { useOptionalOrganization } from '@/features/organization/context'
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
-import { Building2, ChevronRight, MapPin } from 'lucide-react'
+import { useOrganization } from '@/features/organization/context'
+import type { PropertyPage } from '@/features/properties/api'
+import { propertyError } from '@/features/properties/errors'
 import { Button, buttonVariants } from '@/components/ui/button'
+import { Pagination } from '@/components/ui/pagination'
 import { PageHeader } from '@/components/ui/page-header'
 
 export function PropertiesPage() {
-  const organization = useOptionalOrganization()
-  const properties = [
-    {
-      id: 'prop-101',
-      name: 'Grandview Commercial Tower',
-      address: '100 Financial Way, New York, NY',
-      units: 42,
-      occupancy: '95%',
-    },
-    {
-      id: 'prop-102',
-      name: 'Parkside Residential Apartments',
-      address: '450 Park Avenue, Boston, MA',
-      units: 28,
-      occupancy: '92%',
-    },
-    {
-      id: 'prop-103',
-      name: 'Harbor Logistics Center',
-      address: '88 Port Boulevard, Seattle, WA',
-      units: 14,
-      occupancy: '100%',
-    },
-  ]
-
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        headingLevel={2}
-        title="Properties"
-        description="Manage your enterprise real estate portfolio."
-        actions={organization?.can('PROPERTY_MANAGE') && <Button disabled>Add Property</Button>}
-      />
-
-      <div className="grid grid-cols-1 gap-4">
-        {properties.map((prop) => (
-          <div
-            key={prop.id}
-            className="flex flex-wrap items-center justify-between gap-4 relative rounded-xl border bg-card p-4 shadow-xs motion-safe:transition-shadow hover:border-primary/50 hover:shadow-md sm:p-6"
-          >
-            <div className="flex min-w-0 items-center gap-4">
-              <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <Building2 className="size-6" />
-              </div>
-              <div className="space-y-1">
-                <h3 className="text-base font-semibold">
-                  <Link
-                    to={`/properties/${prop.id}`}
-                    className="before:absolute before:inset-0 hover:underline"
-                  >
-                    {prop.name}
-                  </Link>
-                </h3>
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-                  <MapPin aria-hidden="true" className="size-3.5" />
-                  <span>{prop.address}</span>
-                  <span aria-hidden="true">•</span>
-                  <span>{prop.units} Units</span>
-                  <span aria-hidden="true">•</span>
-                  <span>{prop.occupancy} Occupied</span>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Link
-                to={`/properties/${prop.id}/units`}
-                aria-label={`View Units for ${prop.name}`}
-                className={buttonVariants({
-                  variant: 'outline',
-                  size: 'sm',
-                  className: 'relative',
-                })}
-              >
-                View Units
-              </Link>
-              <ChevronRight aria-hidden="true" className="size-5 text-muted-foreground" />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
+  const org = useOrganization()
+  const [paging, setPaging] = useState({ organizationId: org.current?.organizationId, page: 0 })
+  const page = paging.organizationId === org.current?.organizationId ? paging.page : 0
+  const setPage = (next: number) => setPaging({ organizationId: org.current?.organizationId, page: next })
+  const [size, setSize] = useState(10)
+  const query = useQuery({ queryKey: org.queryKey(['properties', page, size]), queryFn: ({ signal }) => org.request<PropertyPage>('get', 'properties', undefined, { params: { page, size }, signal }), retry: false })
+  return <div className="space-y-6"><PageHeader headingLevel={2} title="Properties" description="Manage properties in the selected organization." actions={org.can('PROPERTY_MANAGE') && <Link className={buttonVariants()} to="/properties/new">Add property</Link>} />
+    <div className="flex flex-wrap items-center gap-3"><Button variant="outline" disabled={query.isFetching} onClick={() => void query.refetch()}>Refresh</Button><label>Page size <select aria-label="Page size" className="rounded border bg-background p-2" value={size} onChange={e => { setSize(Number(e.target.value)); setPage(0) }}><option value={10}>10</option><option value={25}>25</option><option value={50}>50</option></select></label></div>
+    {query.isPending && <p role="status">Loading properties…</p>}{query.isError && <p role="alert">{propertyError(query.error)}</p>}
+    {query.data && <>{query.data.content.length === 0 ? <p>No properties found.</p> : <ul className="space-y-3">{query.data.content.map(property => <li key={property.id} className="rounded-xl border bg-card p-5"><h3><Link className="font-semibold underline" to={`/properties/${property.id}`}>{property.name}</Link></h3><p>{property.city}, {property.countryCode}</p><p className="text-sm text-muted-foreground">{property.propertyType.replace('_', ' ')} · {property.status}</p></li>)}</ul>}<p>Page {query.data.page + 1} of {Math.max(query.data.totalPages, 1)} · {query.data.totalElements} properties</p><Pagination page={page + 1} totalPages={query.data.totalPages} onPageChange={n => setPage(n - 1)} /></>}
+  </div>
 }

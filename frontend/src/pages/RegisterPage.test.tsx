@@ -41,6 +41,11 @@ describe('organization registration', () => {
     expect(password).toHaveAttribute('type', 'password')
     expect(mockedRegister).not.toHaveBeenCalled()
   })
+  it('explains when the backend cannot be reached', async () => {
+    mockedRegister.mockRejectedValueOnce(new ApiError({ status: 0, message: 'offline', isNetworkError: true }))
+    show(); const user = await fill(); await user.click(screen.getByRole('button', { name: 'Create account' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Unable to reach the server')
+  })
   it('links back to login', async () => { show(); await userEvent.click(screen.getByRole('link', { name: 'Sign in' })); expect(screen.getByRole('heading', { name: 'Sign in page' })).toBeInTheDocument() })
   it('rejects a malformed slug before making a request', async () => {
     show(); const user = await fill(); const slug = screen.getByLabelText('Organization slug'); await user.clear(slug); await user.type(slug, 'Invalid_slug'); await user.click(screen.getByRole('button', { name: 'Create account' })); expect(screen.getByRole('alert')).toHaveTextContent('lowercase'); expect(mockedRegister).not.toHaveBeenCalled()

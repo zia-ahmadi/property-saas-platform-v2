@@ -4,6 +4,7 @@ import { LoginPage } from '@/pages/LoginPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { PropertiesPage } from '@/pages/PropertiesPage'
 import { PropertyDetailsPage } from '@/pages/PropertyDetailsPage'
+import { PropertyFormPage } from '@/pages/PropertyFormPage'
 import { UnitsPage } from '@/pages/UnitsPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
@@ -30,6 +31,7 @@ export function AppRouter() {
           <Route path="/properties/:propertyId" element={<PropertyDetailsPage />} />
           <Route path="/properties/:propertyId/units" element={<UnitsPage />} />
           </Route>
+          <Route element={<OrganizationRoute permission="PROPERTY_MANAGE" />}><Route path="/properties/new" element={<PropertyFormPage />} /><Route path="/properties/:propertyId/edit" element={<PropertyFormPage edit />} /></Route>
           <Route element={<OrganizationRoute permission="ORGANIZATION_MANAGE" />}><Route path="/settings" element={<SettingsPage />} /></Route>
         </Route>
 

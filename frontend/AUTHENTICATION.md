@@ -41,3 +41,9 @@ The UI permission mapping mirrors the current backend `RolePermissionMapping`: O
 ## F3 verification limits
 
 F3 provides registration, sign-in, in-memory session handling, protected routes, logout, organization selection, and role-aware controls. Local HTTP browser checks do not verify production Secure cookie behavior. A real-browser flow with multiple memberships, delayed `Set-Cookie` delivery, and multiple backend instances has not been fully tested. The shared refresh cookie can be replaced or revoked by another tab; client-side coordination does not bind that cookie to an individual tab or prove family ownership.
+
+## Registration troubleshooting
+
+The development frontend reads `VITE_API_BASE_URL` at Vite startup. On a fresh checkout, copy `frontend/.env.example` to `frontend/.env.development`; the example targets `http://localhost:8081`. The local `.env.development` is ignored by Git. Registration sends a public JSON request directly to that server; there is no Vite proxy. Start PostgreSQL and the backend first, activate the backend `development` profile, provide its required database password and JWT/CSRF secrets, and set `BROWSER_DEV_ALLOWED_ORIGINS` to the exact Vite origin, for example `http://localhost:5173`. A different port, scheme, or `127.0.0.1` instead of `localhost` is a different origin and must be explicitly configured. Restart Vite or the backend after changing their environment. Verify Flyway reaches the latest version before registering.
+
+An unreachable backend or a CORS rejection can both appear to the browser as a network error; inspect the browser Network panel and backend startup logs without exposing credentials. HTTP 409 indicates an email or organization slug conflict. Successful registration does not authenticate the user: continue to sign in. Avoid changing production cookie or CORS settings for local HTTP.

@@ -7,9 +7,10 @@ import { hasPermission } from './permissions'
 import { ApiError } from '@/lib/api/errors'
 import { useState } from 'react'
 
-const mocks = vi.hoisted(() => ({ auth: { state: { status: 'authenticated', session: { user: { id: 'user' }, organizations: [ { organizationId: 'one', organizationName: 'First', organizationSlug: 'first', role: 'OWNER' }, { organizationId: 'two', organizationName: 'Second', organizationSlug: 'second', role: 'STAFF' } ] } }, service: { subscribe: vi.fn(() => () => {}), request: vi.fn() } } }))
+const mocks = vi.hoisted(() => ({ auth: { state: { status: 'authenticated', session: { user: { id: 'user' }, organizations: [ { organizationId: 'one', organizationName: 'First', organizationSlug: 'first', role: 'OWNER' }, { organizationId: 'two', organizationName: 'Second', organizationSlug: 'second', role: 'STAFF' } ] } }, service: { subscribe: vi.fn(() => () => {}), request: vi.fn(), getSnapshot: vi.fn() } } }))
 vi.mock('@/features/auth/context', () => ({ useAuth: () => mocks.auth }))
 vi.mock('@/config/env', () => ({ API_BASE_URL: 'https://api.example.test' }))
+mocks.auth.service.getSnapshot.mockImplementation(() => mocks.auth.state)
 function Consumer() {
   const org = useOrganization()
   const [result, setResult] = useState('')
@@ -36,6 +37,20 @@ describe('organization context', () => {
     const organizations = mocks.auth.state.session.organizations.splice(0)
     try { render(<OrganizationProvider><Consumer /></OrganizationProvider>); expect(screen.getByText('No organization')).toBeInTheDocument(); expect(screen.getByText('Read only')).toBeInTheDocument() }
     finally { mocks.auth.state.session.organizations.push(...organizations) }
+  })
+  it('rejects a stale callback before it can send a request for the old organization', async () => {
+    mocks.auth.service.request.mockClear()
+    function StaleCallback() {
+      const org = useOrganization()
+      const [oldRequest] = useState(() => org.request)
+      const [result, setResult] = useState('')
+      return <><button onClick={() => org.select('two')}>Switch</button><button onClick={() => { void oldRequest('get', '').catch(() => setResult('Rejected')) }}>Use old callback</button><span>{result}</span></>
+    }
+    render(<OrganizationProvider><StaleCallback /></OrganizationProvider>)
+    await userEvent.click(screen.getByText('Switch'))
+    await userEvent.click(screen.getByText('Use old callback'))
+    expect(await screen.findByText('Rejected')).toBeInTheDocument()
+    expect(mocks.auth.service.request).not.toHaveBeenCalled()
   })
   it('matches the backend roles and fails closed on missing roles', () => {
     expect(hasPermission('OWNER', 'BILLING_MANAGE')).toBe(true); expect(hasPermission('ADMIN', 'MEMBERSHIP_MANAGE')).toBe(true); expect(hasPermission('MANAGER', 'BILLING_MANAGE')).toBe(false); expect(hasPermission('STAFF', 'PROPERTY_MANAGE')).toBe(false); expect(hasPermission(undefined, 'PROPERTY_VIEW')).toBe(false)

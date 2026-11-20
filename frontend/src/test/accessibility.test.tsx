@@ -4,6 +4,7 @@ import axe from 'axe-core'
 import { useState } from 'react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { NotificationProvider } from '@/app/providers/NotificationProvider'
 import { Button } from '@/components/ui/button'
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog'
@@ -27,7 +28,7 @@ import { useNotification } from '@/components/ui/use-notification'
 import { AppShell } from '@/layouts/AppShell'
 import { LoginPage } from '@/pages/LoginPage'
 
-vi.mock('@/features/organization/context', () => ({ useOptionalOrganization: () => ({ can: () => true }) }))
+vi.mock('@/features/organization/context', async () => { const { propertyOrganization } = await import('@/test/property-fixtures'); return { useOptionalOrganization: () => ({ can: () => true }), useOrganization: () => propertyOrganization } })
 
 vi.mock('@/features/auth/context', () => ({ useAuth: () => ({ state: { status: 'anonymous' }, service: {} }), useOptionalAuth: () => null }))
 import { PropertyDetailsPage } from '@/pages/PropertyDetailsPage'
@@ -116,7 +117,7 @@ describe('accessibility audit', () => {
   it('exposes keyboard-operable property routes in the application shell', async () => {
     const user = userEvent.setup()
     const { container } = render(
-      <MemoryRouter initialEntries={['/properties']}>
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><MemoryRouter initialEntries={['/properties']}>
         <Routes>
           <Route element={<AppShell />}>
             <Route path="/properties" element={<PropertiesPage />} />
@@ -124,21 +125,19 @@ describe('accessibility audit', () => {
             <Route path="/properties/:propertyId/units" element={<UnitsPage />} />
           </Route>
         </Routes>
-      </MemoryRouter>,
+      </MemoryRouter></QueryClientProvider>,
     )
-    const details = screen.getByRole('link', { name: 'Grandview Commercial Tower' })
-    const units = screen.getByRole('link', { name: 'View Units for Grandview Commercial Tower' })
-    expect(units).toHaveAttribute('href', '/properties/prop-101/units')
+    const details = await screen.findByRole('link', { name: 'Grandview Commercial Tower' })
     await expectAccessible(container)
 
     await user.tab()
     await user.keyboard('{Enter}')
     expect(screen.getByRole('main')).toHaveFocus()
-    expect(screen.getByRole('button', { name: 'Add Property' })).toBeDisabled()
-    await user.tab()
+    expect(screen.getByRole('link', { name: 'Add property' })).toBeInTheDocument()
+    await user.tab(); await user.tab(); await user.tab(); await user.tab()
     expect(details).toHaveFocus()
     await user.keyboard('{Enter}')
-    const manage = screen.getByRole('link', { name: 'Manage Units' })
+    const manage = await screen.findByRole('link', { name: 'Manage Units (preview)' })
     expect(manage).toHaveAttribute('href', '/properties/prop-101/units')
     expect(screen.getByRole('link', { name: 'Back to Properties' })).toHaveAttribute(
       'href',
@@ -150,7 +149,7 @@ describe('accessibility audit', () => {
     const back = screen.getByRole('link', { name: 'Back to Property Details' })
     expect(back).toHaveAttribute('href', '/properties/prop-101')
     await user.click(back)
-    expect(screen.getByRole('link', { name: 'Manage Units' })).toBeVisible()
+    expect(await screen.findByRole('link', { name: 'Manage Units (preview)' })).toBeVisible()
   })
 
   it('audits shared forms, table and feedback states, and a visible notification', async () => {

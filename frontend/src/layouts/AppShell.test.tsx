@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 vi.mock('@/config/env', () => ({ API_BASE_URL: 'https://api.example.test' }))
 
-vi.mock('@/features/organization/context', () => ({ useOptionalOrganization: () => ({ current: { organizationId: 'test' }, can: () => true, organizations: [], select: () => {}, queryKey: () => ['test-org'], request: async () => ({ status: 'ACTIVE' }) }) }))
+vi.mock('@/features/organization/context', async () => { const { propertyOrganization } = await import('@/test/property-fixtures'); return { useOptionalOrganization: () => propertyOrganization, useOrganization: () => propertyOrganization } })
 
 vi.mock('@/features/auth/context', () => ({
   useAuth: () => ({ state: window.location.pathname === '/login' ? { status: 'anonymous' } : { status: 'authenticated', session: { user: { id: '1' }, organizations: [] } }, service: {} }),
@@ -87,7 +87,7 @@ it.each([
 it('opens property units and returns to details within the shared shell', async () => {
   const user = userEvent.setup()
   renderRoute('/properties/prop-101')
-  await user.click(screen.getByRole('link', { name: /Manage Units/ }))
+  await user.click(await screen.findByRole('link', { name: /Manage Units/ }))
   expect(
     within(screen.getByRole('main')).getByRole('heading', { name: 'Units Management' }),
   ).toBeInTheDocument()
