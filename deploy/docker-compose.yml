@@ -1,0 +1,91 @@
+# Full-stack deployment stack for the Property SaaS platform.
+#
+#   PostgreSQL 15  ->  Spring Boot property-core  ->  React SPA on Nginx
+#
+# The browser talks only to the Nginx container, which serves the SPA and
+# reverse-proxies /api/ to the backend over the internal Docker network. Neither
+# PostgreSQL nor the backend publishes a host port.
+#
+# Start it with:
+#   cp .env.example .env      # then edit the secrets
+#   docker compose up -d --build
+#
+# This stack is deliberately separate from infra/docker-compose.yml, which owns
+# the long-lived development database volume. It uses its own project name and
+# its own named volume so the development data is never touched.
+
+name: property-saas-f8
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-property_management}
+      POSTGRES_USER: ${POSTGRES_USER:-property_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set (see .env.example)}
+    volumes:
+      - f8_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-property_admin} -d $${POSTGRES_DB:-property_management}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - app
+
+  property-core:
+    build:
+      context: ../backend/property-core
+      dockerfile: Dockerfile
+    image: property-saas-backend:f8
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-development}
+      # Internal service discovery: the database host is the compose service name.
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-property_management}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-property_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set (see .env.example)}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set (see .env.example)}
+      BROWSER_CSRF_SECRET: ${BROWSER_CSRF_SECRET:?BROWSER_CSRF_SECRET must be set (see .env.example)}
+      # Exact Origin allowlist for unsafe /api/v1/browser-auth/** requests.
+      # The production variable is only consulted outside the development profile.
+      BROWSER_ALLOWED_ORIGINS: ${BROWSER_ALLOWED_ORIGINS:-${PUBLIC_ORIGIN:-http://localhost:8080}}
+      BROWSER_DEV_ALLOWED_ORIGINS: ${BROWSER_DEV_ALLOWED_ORIGINS:-${PUBLIC_ORIGIN:-http://localhost:8080}}
+      JAVA_OPTS: ${JAVA_OPTS:--XX:MaxRAMPercentage=75.0}
+    expose:
+      - "8081"
+    networks:
+      - app
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    image: property-saas-frontend:f8
+    restart: unless-stopped
+    depends_on:
+      property-core:
+        condition: service_healthy
+    environment:
+      # Empty means "call the same origin", which Nginx proxies to property-core.
+      API_BASE_URL: ${API_BASE_URL:-}
+    ports:
+      # The only host-published port; everything else stays on the internal network.
+      - "${FRONTEND_PORT:-8080}:8080"
+    networks:
+      - app
+
+volumes:
+  f8_pgdata:
+    # Clearly named, deployment-test volume. Distinct from the development
+    # volume `infra_property_postgres_data`.
+    name: f8_property_postgres_data
+
+networks:
+  app:
+    driver: bridge

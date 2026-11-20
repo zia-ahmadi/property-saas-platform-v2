@@ -4,7 +4,11 @@
  */
 
 const getApiBaseUrl = (): string => {
-  const url = import.meta.env.VITE_API_BASE_URL
+  // A runtime configuration file (public/config.js, rewritten by the container
+  // entrypoint) lets one build serve any hostname without a rebuild. When it
+  // provides no value, fall back to the build-time Vite variable.
+  const runtime = typeof window === 'undefined' ? undefined : window.__PROPERTY_SAAS_CONFIG__
+  const url = runtime?.apiBaseUrl || import.meta.env.VITE_API_BASE_URL
 
   if (!url || url.trim() === '') {
     throw new Error('VITE_API_BASE_URL is not defined or is empty')

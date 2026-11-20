@@ -1,0 +1,22 @@
+# Overlay that adjusts the stack for the F8 Docker integration run.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.qa.yml up -d --build
+#
+# It only affects the disposable test environment: the PostgreSQL container gets
+# a fixed name and a `property-saas.qa=f8` label, and the access token gets a
+# short lifetime. The Playwright fixtures refuse to execute any SQL unless the
+# target container carries that label, so seeding and cleanup can never reach a
+# non-disposable database.
+
+services:
+  postgres:
+    container_name: property-saas-f8-postgres-qa
+    labels:
+      property-saas.qa: "f8"
+
+  property-core:
+    # Short access-token lifetime so the browser suite observes a real
+    # coordinated refresh inside its 15 s poll (production keeps the 900 s
+    # default from application.properties).
+    environment:
+      APP_JWT_ACCESS_TOKEN_EXPIRATION: "35"

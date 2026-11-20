@@ -8,10 +8,16 @@ export type Role = 'OWNER' | 'ADMIN' | 'MANAGER' | 'STAFF'
 export interface Account { userId: string; organizationId: string; email: string; password: string; organizationName: string; organizationSlug: string }
 export function sql(query: string): string {
   const container = process.env.QA_DB_CONTAINER ?? ''
-  if (!/^property-saas-f7-[a-f0-9]{12}$/.test(container)) throw new Error('Use npm run qa:e2e: dedicated QA container is required')
+  // Only ever run destructive SQL against a known disposable QA container:
+  // either the F7 runner's throwaway container or the labelled F8 compose one.
+  if (!/^property-saas-(?:f7-[a-f0-9]{12}|f8-postgres-qa)$/.test(container))
+    throw new Error('Use npm run qa:e2e or the F8 compose QA stack: a dedicated disposable QA container is required')
+  const expectedLabel = process.env.QA_DB_LABEL ?? 'f7'
   const label = spawnSync('docker', ['inspect', '--format', '{{index .Config.Labels "property-saas.qa"}}', container], { encoding: 'utf8' })
-  if (label.status !== 0 || label.stdout.trim() !== 'f7') throw new Error('Refusing SQL outside a labelled disposable F7 container')
-  const result = spawnSync('docker', ['exec', '-i', container, 'psql', '-U', 'qa_admin', '-d', 'qa_e2e', '-Atq', '-v', 'ON_ERROR_STOP=1'], { input: query, encoding: 'utf8' })
+  if (label.status !== 0 || label.stdout.trim() !== expectedLabel) throw new Error(`Refusing SQL outside a disposable container labelled property-saas.qa=${expectedLabel}`)
+  const user = process.env.QA_DB_USER ?? 'qa_admin'
+  const database = process.env.QA_DB_NAME ?? 'qa_e2e'
+  const result = spawnSync('docker', ['exec', '-i', container, 'psql', '-U', user, '-d', database, '-Atq', '-v', 'ON_ERROR_STOP=1'], { input: query, encoding: 'utf8' })
   if (result.status !== 0) throw new Error('QA fixture SQL failed')
   return result.stdout.trim()
 }

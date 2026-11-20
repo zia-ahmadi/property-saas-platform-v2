@@ -1,0 +1,36 @@
+# Keep the Docker build context minimal and free of secrets or test artifacts.
+
+# Dependencies and build output (rebuilt inside the image)
+node_modules
+dist
+.vite
+
+# Environment files with local credentials (the SPA talks to its own origin)
+.env
+.env.*
+!.env.example
+
+# Test and QA artifacts
+.qa
+coverage
+test-results
+playwright-report
+blob-report
+e2e
+playwright.config.ts
+tsconfig.e2e.json
+scripts
+
+# Documentation and tooling local to the repository
+docs
+.qwen
+@
+*.md
+
+# Docker metadata itself
+Dockerfile
+.dockerignore
+
+# VCS metadata
+.git
+.gitignore
