@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { randomBytes } from 'node:crypto'
-const api='http://localhost:8081', app='http://localhost:5189'
+const api=process.env.AUTH_API_URL || 'http://localhost:8081', app=process.env.AUTH_APP_URL || 'http://localhost:5189'
 const password=randomBytes(20).toString('hex')+'A1!'
 const suffix=randomBytes(6).toString('hex')
 const users=[0,1].map(i=>({email:`f335-${suffix}-${i}@example.test`,password,firstName:'Test',lastName:'User',organizationName:`F335 ${suffix} ${i}`,organizationSlug:`f335-${suffix}-${i}`}))

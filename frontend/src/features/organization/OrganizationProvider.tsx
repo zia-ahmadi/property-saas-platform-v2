@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { queryClient } from '@/app/providers/queryClient'
 import { useAuth } from '@/features/auth/context'
+import { discardOrganizationQueries } from './cache'
 import { hasPermission } from './permissions'
 import { OrganizationContext, type OrganizationContextValue } from './context'
 import type { RequestOptions } from '@/lib/api/client'
@@ -16,7 +17,7 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
   const current = organizations.find(org => org.organizationId === selected) ?? organizations[0]
   const identity = state.status === 'authenticated' ? state.session.user.id : undefined
   useEffect(() => service.subscribe(() => { version.current++ }), [service])
-  useEffect(() => { void queryClient.cancelQueries().then(() => queryClient.clear()) }, [identity, current?.organizationId])
+  useEffect(() => { discardOrganizationQueries(queryClient, [identity, current?.organizationId, current?.role]) }, [identity, current?.organizationId, current?.role])
   const value: OrganizationContextValue = {
     current, organizations, forbidden: !!identity && deniedScope?.identity === identity && deniedScope.id === current?.organizationId && state.status === 'authenticated' && deniedScope.session === state.session,
     select(id) {
@@ -24,7 +25,7 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
       version.current++
       selectedRef.current = id
       setDeniedScope(undefined)
-      void queryClient.cancelQueries().then(() => queryClient.clear())
+      discardOrganizationQueries(queryClient)
       setSelected(id)
     },
     can: permission => hasPermission(current?.role, permission),

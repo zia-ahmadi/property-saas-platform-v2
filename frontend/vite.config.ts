@@ -6,6 +6,7 @@ import { fileURLToPath, URL } from 'node:url'
 export default defineConfig({
   test: {
     environment: 'jsdom',
+    include: ['src/**/*.test.{ts,tsx}'],
     setupFiles: ['./src/test/setup.ts'],
     isolate: true,
     restoreMocks: true,
