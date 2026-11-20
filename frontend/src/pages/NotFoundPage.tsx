@@ -6,7 +6,10 @@ export function NotFoundPage() {
   const navigate = useNavigate()
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-6 text-center space-y-6">
+    <main
+      id="main-content"
+      className="flex min-h-screen flex-col items-center justify-center p-6 text-center space-y-6"
+    >
       <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-destructive/10 text-destructive">
         <AlertTriangle className="size-10" />
       </div>
@@ -17,6 +20,6 @@ export function NotFoundPage() {
       <Button onClick={() => navigate('/dashboard')} className="gap-2">
         <Home className="size-4" /> Return to Dashboard
       </Button>
-    </div>
+    </main>
   )
 }

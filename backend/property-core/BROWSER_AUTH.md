@@ -6,6 +6,8 @@ Production deployments must explicitly use `app.browser.cookie-mode=production` 
 
 Bootstrap with a credentialed GET to `/api/v1/browser-auth/csrf`; send the returned token in `X-CSRF-TOKEN` with credentialed login and refresh POST requests. Tokens expire after one hour; re-bootstrap on expiration. A bootstrap replaces the shared CSRF cookie, so tabs must coordinate bootstrap and retry once after a CSRF rejection. Refresh tokens are not returned in browser JSON. Forwarded-header processing is disabled by default. Reverse proxies must remove incoming forwarding headers and set trusted proxy headers themselves; if a deployment deliberately enables forwarding support, restrict trust to those proxies. Origin validation uses the literal Origin header and does not derive trust from forwarded host or scheme.
 
+The browser-auth filter runs ahead of the CORS layer and requires the exact configured Origin on every unsafe method, including preflight. Spring's CORS matching trims a trailing slash, so a non-browser Origin such as `https://app.example.test/` would otherwise pass preflight; it is rejected here. Genuine preflight requests are still CSRF-free, while the actual login, refresh and logout requests must also carry a valid CSRF token.
+
 CSRF tokens are anonymous and bound to the corresponding CSRF cookie; they are not tied to an authenticated user or refresh-token family. All future state-changing endpoints under `/api/v1/browser-auth/` must use the same CSRF and trusted-Origin protection.
 
 SameSite=Strict assumes a same-site deployment. Cookies do not protect against same-origin script compromise; avoid logging Cookie, Set-Cookie, authorization and request bodies at the application, proxy and tracing layers.

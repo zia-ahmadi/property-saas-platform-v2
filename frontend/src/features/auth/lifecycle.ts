@@ -126,9 +126,12 @@ export class AuthLifecycleService {
     if (this.state.status !== 'authenticated' || this.disposed) return Promise.resolve(false)
     const user = this.state.session.user.id
     const generation = ++this.generation
-    this.token = undefined
     if (this.timer) clearTimeout(this.timer)
-    this.set({ status: 'refreshing' })
+    this.timer = undefined
+    // A refresh only ever runs for an established session (proactive timer or a
+    // 401 retry). Keep that session and its in-memory bearer usable while the
+    // new token is negotiated so mounted queries, forms and dialogs are not torn
+    // down; verify() atomically replaces the session once the token is confirmed.
     const flight = (async () => {
       try {
         const result = await this.deps.coordinator.refresh()

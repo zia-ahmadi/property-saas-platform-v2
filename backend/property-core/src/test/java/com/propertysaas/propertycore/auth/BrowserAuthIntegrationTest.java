@@ -104,6 +104,10 @@ class BrowserAuthIntegrationTest {
                 .andExpect(header().string("Access-Control-Allow-Credentials", "true"));
         mvc.perform(options("/api/v1/browser-auth/login").header("Origin", "https://evil.example")
                         .header("Access-Control-Request-Method", "POST")).andExpect(status().isForbidden());
+        // A trailing slash is not the configured Origin; the CORS layer would trim
+        // it, so the browser-auth filter must reject the preflight itself.
+        mvc.perform(options("/api/v1/browser-auth/login").header("Origin", ORIGIN + "/")
+                        .header("Access-Control-Request-Method", "POST")).andExpect(status().isForbidden());
     }
 
     @Test

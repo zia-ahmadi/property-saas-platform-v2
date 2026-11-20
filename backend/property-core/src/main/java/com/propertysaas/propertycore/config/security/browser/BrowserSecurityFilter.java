@@ -20,10 +20,16 @@ public class BrowserSecurityFilter extends OncePerRequestFilter {
         if (path.equals("/api/v1/browser-auth") || path.startsWith("/api/v1/browser-auth/")) {
             response.setHeader("Cache-Control", "no-store");
             response.setHeader("Pragma", "no-cache");
-            if (!"GET".equals(request.getMethod()) && !"HEAD".equals(request.getMethod()) &&
-                    !CorsUtils.isPreFlightRequest(request)) {
+            if (!"GET".equals(request.getMethod()) && !"HEAD".equals(request.getMethod())) {
                 var originHeaders = Collections.list(request.getHeaders("Origin"));
-                if (originHeaders.size() != 1 || !security.origins().contains(originHeaders.getFirst()) || !security.validCsrf(request)) {
+                boolean exactOrigin = originHeaders.size() == 1 && security.origins().contains(originHeaders.getFirst());
+                // The CORS layer trims trailing slashes before matching, so a
+                // non-browser Origin such as "https://app.example.test/" would be
+                // accepted on preflight. Enforce the exact configured Origin here
+                // for every unsafe method, and additionally require CSRF for the
+                // actual (non-preflight) request.
+                boolean csrf = CorsUtils.isPreFlightRequest(request) || security.validCsrf(request);
+                if (!exactOrigin || !csrf) {
                     response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                     response.setContentType("application/json");
                     response.getWriter().write("{\"status\":403,\"error\":\"Forbidden\",\"message\":\"Request rejected\"}");

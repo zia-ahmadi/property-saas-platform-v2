@@ -25,6 +25,7 @@ Preserve the original shadcn neutral palette, its red destructive color, and its
 | `accent`                     | `oklch(0.97 0 0)`           | `oklch(0.269 0 0)`           |
 | `accent-foreground`          | `oklch(0.205 0 0)`          | `oklch(0.985 0 0)`           |
 | `destructive`                | `oklch(0.577 0.245 27.325)` | `oklch(0.704 0.191 22.216)`  |
+| `destructive-strong`         | `oklch(0.444 0.177 26.899)` | `oklch(0.808 0.114 19.571)`  |
 | `border`                     | `oklch(0.922 0 0)`          | `oklch(1 0 0 / 10%)`         |
 | `input`                      | `oklch(0.922 0 0)`          | `oklch(1 0 0 / 15%)`         |
 | `ring`                       | `oklch(0.708 0 0)`          | `oklch(0.556 0 0)`           |
@@ -42,7 +43,7 @@ Preserve the original shadcn neutral palette, its red destructive color, and its
 | `sidebar-border`             | `oklch(0.922 0 0)`          | `oklch(1 0 0 / 10%)`         |
 | `sidebar-ring`               | `oklch(0.708 0 0)`          | `oklch(0.556 0 0)`           |
 
-Pair surfaces with their corresponding foreground tokens. Use `primary` for actions, `secondary` for supporting controls, `muted` for low-emphasis surfaces and text, and `accent` for highlighted surfaces. `destructive` is red foreground for existing tinted destructive controls, not a background/foreground pair. `border` is a subtle separator; `input` retains the original subtle control-boundary color, including its transparency in dark mode. `ring` indicates focus. Chart tokens provide the original five grayscale shades; they do not encode business statuses.
+Pair surfaces with their corresponding foreground tokens. Use `primary` for actions, `secondary` for supporting controls, `muted` for low-emphasis surfaces and text, and `accent` for highlighted surfaces. `destructive` is red foreground for existing tinted destructive controls, not a background/foreground pair. When destructive text sits on a tinted destructive surface (for example the destructive Button and Badge variants), use `destructive-strong`; the base `destructive` red does not reach 4.5:1 against its own 10–20% tint. `border` is a subtle separator; `input` retains the original subtle control-boundary color, including its transparency in dark mode. `ring` indicates focus. Chart tokens provide the original five grayscale shades; they do not encode business statuses.
 
 ## Typography
 

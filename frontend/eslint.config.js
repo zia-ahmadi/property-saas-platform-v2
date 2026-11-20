@@ -31,5 +31,17 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    files: ['e2e/**/*.ts'],
+    languageOptions: {
+      globals: globals.node,
+    },
+    rules: {
+      // Playwright fixtures declare dependencies with an empty destructure and
+      // receive a `use` callback that is not a React hook.
+      'no-empty-pattern': 'off',
+      'react-hooks/rules-of-hooks': 'off',
+    },
+  },
   eslintConfigPrettier,
 ])

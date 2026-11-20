@@ -10,8 +10,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import com.propertysaas.propertycore.config.security.browser.BrowserSecurityFilter;
 import com.propertysaas.propertycore.config.security.browser.BrowserSecurity;
-import org.springframework.security.web.authentication.logout.LogoutFilter;
 import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
 import org.springframework.security.oauth2.server.resource.web.DefaultBearerTokenResolver;
 
 @Configuration
@@ -25,7 +25,10 @@ public class SecurityConfig {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .csrf(csrf -> csrf.disable())
-                .addFilterBefore(new BrowserSecurityFilter(browserSecurity), LogoutFilter.class)
+                // Run before Spring's CorsFilter: the CORS layer trims trailing
+                // slashes and would short-circuit a matching preflight with 200
+                // before this filter could reject an inexact Origin.
+                .addFilterBefore(new BrowserSecurityFilter(browserSecurity), CorsFilter.class)
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth

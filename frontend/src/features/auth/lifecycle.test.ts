@@ -77,6 +77,21 @@ describe('refresh cancellation', () => {
   })
 })
 
+describe('refresh continuity', () => {
+  it('keeps the established session and bearer usable while a proactive refresh is in flight', async () => {
+    const { service, coordinator } = setup(); await service.signIn(credentials)
+    const gate = deferred<typeof access>(); coordinator.refresh.mockReturnValueOnce(gate.promise)
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{"ok":true}', { headers: { 'Content-Type': 'application/json' } })))
+    const refresh = service.refresh()
+    // The refresh must not blank the session, otherwise mounted queries and dialogs tear down.
+    expect(service.getSnapshot()).toEqual({ status: 'authenticated', session })
+    await expect(service.request('get', 'api/v1/organizations/example')).resolves.toEqual({ ok: true })
+    gate.resolve(access); await expect(refresh).resolves.toBe(true)
+    expect(service.getSnapshot().status).toBe('authenticated')
+    vi.unstubAllGlobals(); service.dispose()
+  })
+})
+
 describe('protected requests', () => {
   it('uses the in-memory bearer and discards results after sign-out', async () => {
     const { service } = setup(); await service.signIn(credentials)
