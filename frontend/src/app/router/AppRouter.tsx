@@ -24,18 +24,39 @@ export function AppRouter() {
         <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
         {/* Shared dashboard layout */}
-        <Route element={<ProtectedRoute />}><Route element={<AppShell />}>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route element={<OrganizationRoute permission="ORGANIZATION_VIEW" />}><Route path="/dashboard" element={<DashboardPage />} /></Route>
-          <Route element={<OrganizationRoute permission="PROPERTY_VIEW" />}><Route path="/properties" element={<PropertiesPage />} />
-          <Route path="/properties/:propertyId" element={<PropertyDetailsPage />} />
-          <Route path="/properties/:propertyId/units" element={<UnitsPage />} />
+        <Route element={<ProtectedRoute />}>
+          <Route element={<AppShell />}>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route element={<OrganizationRoute permission="ORGANIZATION_VIEW" />}>
+              <Route path="/dashboard" element={<DashboardPage />} />
+            </Route>
+            <Route element={<OrganizationRoute permission="PROPERTY_VIEW" />}>
+              <Route path="/properties" element={<PropertiesPage />} />
+              <Route path="/properties/:propertyId" element={<PropertyDetailsPage />} />
+              <Route path="/properties/:propertyId/units" element={<UnitsPage />} />
+              <Route
+                path="/properties/:propertyId/units/:unitId"
+                element={<UnitsPage mode="details" />}
+              />
+            </Route>
+            <Route element={<OrganizationRoute permission="PROPERTY_MANAGE" />}>
+              <Route
+                path="/properties/:propertyId/units/new"
+                element={<UnitsPage mode="create" />}
+              />
+              <Route
+                path="/properties/:propertyId/units/:unitId/edit"
+                element={<UnitsPage mode="edit" />}
+              />
+              <Route path="/properties/new" element={<PropertyFormPage />} />
+              <Route path="/properties/:propertyId/edit" element={<PropertyFormPage edit />} />
+            </Route>
+            <Route element={<OrganizationRoute permission="ORGANIZATION_MANAGE" />}>
+              <Route path="/settings" element={<SettingsPage />} />
+            </Route>
           </Route>
-          <Route element={<OrganizationRoute permission="PROPERTY_MANAGE" />}><Route path="/properties/new" element={<PropertyFormPage />} /><Route path="/properties/:propertyId/edit" element={<PropertyFormPage edit />} /></Route>
-          <Route element={<OrganizationRoute permission="ORGANIZATION_MANAGE" />}><Route path="/settings" element={<SettingsPage />} /></Route>
-        </Route>
 
-        <Route path="/forbidden" element={<ForbiddenPage />} />
+          <Route path="/forbidden" element={<ForbiddenPage />} />
         </Route>
 
         {/* Not Found */}

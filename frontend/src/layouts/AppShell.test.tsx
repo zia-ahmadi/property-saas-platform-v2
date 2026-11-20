@@ -67,7 +67,7 @@ it.each([
 
 it.each([
   { path: '/properties/prop-101', title: 'Property Details', heading: 'Property Details' },
-  { path: '/properties/prop-101/units', title: 'Units', heading: 'Units Management' },
+  { path: '/properties/prop-101/units', title: 'Units', heading: 'Units' },
 ])('keeps $path inside the shell with Properties active', ({ path, title, heading }) => {
   renderRoute(path)
   expect(screen.getByRole('complementary')).toBeInTheDocument()
@@ -89,9 +89,9 @@ it('opens property units and returns to details within the shared shell', async 
   renderRoute('/properties/prop-101')
   await user.click(await screen.findByRole('link', { name: /Manage Units/ }))
   expect(
-    within(screen.getByRole('main')).getByRole('heading', { name: 'Units Management' }),
+    within(screen.getByRole('main')).getByRole('heading', { name: 'Units' }),
   ).toBeInTheDocument()
-  await user.click(screen.getByRole('link', { name: /Back to Property Details/ }))
+  await user.click(screen.getByRole('link', { name: /Back to property/ }))
   expect(
     within(screen.getByRole('main')).getByRole('heading', { name: 'Property Details' }),
   ).toBeInTheDocument()

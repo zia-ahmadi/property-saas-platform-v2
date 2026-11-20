@@ -3,5 +3,5 @@ export const propertyOrganization = {
   current: { organizationId: 'test', organizationName: 'Test', organizationSlug: 'test', role: 'OWNER' },
   can: () => true, organizations: [], select: () => {},
   queryKey: (keys: unknown[]) => ['organization', 'test', ...keys],
-  request: async (_method: string, path: string) => path === 'properties' ? { content: [testProperty], page: 0, size: 10, totalElements: 1, totalPages: 1, first: true, last: true } : path.startsWith('properties/') ? testProperty : { status: 'active' },
+  request: async (_method: string, path: string) => path.endsWith('/units') ? { content: [], page: 0, size: 10, totalElements: 0, totalPages: 0, first: true, last: true } : path === 'properties' ? { content: [testProperty], page: 0, size: 10, totalElements: 1, totalPages: 1, first: true, last: true } : path.startsWith('properties/') ? testProperty : { status: 'active' },
 }

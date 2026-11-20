@@ -137,7 +137,7 @@ describe('accessibility audit', () => {
     await user.tab(); await user.tab(); await user.tab(); await user.tab()
     expect(details).toHaveFocus()
     await user.keyboard('{Enter}')
-    const manage = await screen.findByRole('link', { name: 'Manage Units (preview)' })
+    const manage = await screen.findByRole('link', { name: 'Manage Units' })
     expect(manage).toHaveAttribute('href', '/properties/prop-101/units')
     expect(screen.getByRole('link', { name: 'Back to Properties' })).toHaveAttribute(
       'href',
@@ -145,11 +145,11 @@ describe('accessibility audit', () => {
     )
 
     await user.click(manage)
-    expect(screen.getByRole('heading', { name: 'Units Management' })).toBeVisible()
-    const back = screen.getByRole('link', { name: 'Back to Property Details' })
+    expect(screen.getByRole('heading', { name: 'Units', level: 2 })).toBeVisible()
+    const back = screen.getByRole('link', { name: 'Back to property' })
     expect(back).toHaveAttribute('href', '/properties/prop-101')
     await user.click(back)
-    expect(await screen.findByRole('link', { name: 'Manage Units (preview)' })).toBeVisible()
+    expect(await screen.findByRole('link', { name: 'Manage Units' })).toBeVisible()
   })
 
   it('audits shared forms, table and feedback states, and a visible notification', async () => {

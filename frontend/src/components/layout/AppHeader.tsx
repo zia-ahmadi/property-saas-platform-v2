@@ -11,7 +11,7 @@ export function AppHeader() {
   const auth = useOptionalAuth()
   const organization = useOptionalOrganization()
   const [warning, setWarning] = useState(false)
-  const title = matchPath('/properties/:propertyId/units', pathname)
+  const title = matchPath('/properties/:propertyId/units/*', pathname)
     ? 'Units'
     : matchPath('/properties/:propertyId', pathname)
       ? 'Property Details'
