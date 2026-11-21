@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { AuthCoordinationUnavailableError, AuthRefreshOutcomeUnknownError, AuthRefreshRecoveryRequiredError, createAuthCoordinator } from './coordination'
+import { AuthCoordinationUnavailableError, AuthRefreshOutcomeUnknownError, AuthRefreshRecoveryRequiredError, AuthRefreshUnavailableError, createAuthCoordinator } from './coordination'
 import type { CoordinatorDependencies } from './coordination'
 import type { AccessTokenResponse } from './api'
+import { ApiError } from '@/lib/api/errors'
 
 vi.mock('@/config/env', () => ({ API_BASE_URL: 'https://api.example.test' }))
 
@@ -351,6 +352,25 @@ describe('auth coordination', () => {
     expect(api.refresh).toHaveBeenCalledOnce()
     await expect(coordinator.refresh()).rejects.toBeInstanceOf(AuthRefreshRecoveryRequiredError)
     coordinator.acknowledgeRefreshRecovery()
+    coordinator.close()
+  })
+
+  it('allows retry after a shared timeout during CSRF bootstrap', async () => {
+    vi.useFakeTimers()
+    const lock = lockHarness(), api = transport(), entered = deferred<void>()
+    api.getCsrfToken.mockImplementationOnce(options => new Promise((_resolve, reject) => {
+      options.signal.addEventListener('abort', () => {
+        reject(new ApiError({ status: 0, message: 'request aborted', isAbortError: true }))
+      }, { once: true })
+      entered.resolve()
+    }))
+    const coordinator = createAuthCoordinator({ locks: lock.locks, transport: api, createChannel: null })
+    const failed = expect(coordinator.refresh()).rejects.toBeInstanceOf(AuthRefreshUnavailableError)
+    await entered.promise
+    await vi.advanceTimersByTimeAsync(30_000)
+    await failed
+    expect(api.refresh).not.toHaveBeenCalled()
+    await expect(coordinator.refresh()).resolves.toEqual(access)
     coordinator.close()
   })
 

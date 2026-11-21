@@ -1,21 +1,53 @@
 import { test, expect, signIn, visit, sql, uuid } from './fixtures.ts'
 
-test('cold start, memory-only credentials, expiry recovery and logout', async ({ page, context, qa }) => {
+test('cold start, memory-only credentials, reload restoration and logout', async ({ page, context, qa }) => {
   const account = await qa.account()
   let refreshes = 0
   page.on('request', request => { if (request.url().endsWith('/browser-auth/refresh')) refreshes++ })
-  await page.goto('/dashboard'); await expect(page).toHaveURL(/\/login$/); expect(refreshes).toBe(0)
+  await page.goto('/dashboard')
+  await expect(page).toHaveURL(/\/login$/)
+  expect(refreshes).toBe(1)
+
   await signIn(page, account)
-  expect(await page.evaluate(() => ({ local: Object.keys(localStorage), session: Object.keys(sessionStorage), readableRefresh: document.cookie.includes('refresh=') }))).toEqual({ local: [], session: [], readableRefresh: false })
-  expect((await context.cookies()).filter(cookie => cookie.name.includes('refresh')).every(cookie => cookie.httpOnly)).toBe(true)
-  // Wait for at least one real coordinated refresh on the deliberately short test token lifetime.
-  await expect.poll(() => refreshes, { timeout: 15000 }).toBeGreaterThanOrEqual(1)
+  const cookies = (await context.cookies()).filter(cookie => cookie.name.includes('refresh'))
+  expect(cookies).toHaveLength(1)
+  expect(cookies[0].httpOnly).toBe(true)
+  // Wait for a coordinated refresh on the deliberately short test token lifetime.
+  await expect.poll(() => refreshes, { timeout: 15000 }).toBeGreaterThan(1)
+  await expect.poll(() => page.evaluate(() => sessionStorage.getItem('property-saas:auth-recovery'))).toBeNull()
   await expect(page.getByRole('heading', { name: 'Enterprise Portfolio Dashboard' })).toBeVisible()
+
+  await page.reload()
+  await expect(page).toHaveURL(/\/dashboard$/)
+  await expect(page.getByRole('heading', { name: 'Enterprise Portfolio Dashboard' })).toBeVisible()
+  expect(await page.evaluate(() => ({
+    local: Object.keys(localStorage),
+    session: Object.keys(sessionStorage).filter(key => key !== 'property-saas:auth-recovery'),
+    readableRefresh: document.cookie.includes('refresh='),
+  }))).toEqual({ local: [], session: [], readableRefresh: false })
+
+  const logout = page.waitForResponse(response => response.url().endsWith('/browser-auth/logout'))
   await page.getByRole('button', { name: 'Sign out', exact: true }).click()
   await expect(page).toHaveURL(/\/login$/)
-  await signIn(page, account)
-  await page.reload(); await expect(page).toHaveURL(/\/login$/)
-  expect(await page.evaluate(() => Object.keys(localStorage))).toEqual([])
+  expect((await logout).status()).toBe(204)
+  await page.reload()
+  await expect(page).toHaveURL(/\/login$/)
+  await page.goto('/dashboard')
+  await expect(page).toHaveURL(/\/login$/)
+})
+
+test('startup CSRF network failure keeps the protected URL and allows a safe retry', async ({ page }) => {
+  await page.route('**/api/v1/browser-auth/csrf', route => route.abort('internetdisconnected'))
+  let refreshes = 0
+  page.on('request', request => { if (request.url().endsWith('/browser-auth/refresh')) refreshes++ })
+  await page.goto('/dashboard')
+  await expect(page.getByRole('alert')).toContainText('Unable to restore your session')
+  await expect(page).toHaveURL(/\/dashboard$/)
+  expect(refreshes).toBe(0)
+  await page.unroute('**/api/v1/browser-auth/csrf')
+  await page.getByRole('button', { name: 'Retry verification' }).click()
+  await expect(page).toHaveURL(/\/login$/)
+  expect(refreshes).toBe(1)
 })
 
 test('same-context cross-tab account change invalidates the established tab', async ({ page, context, qa }) => {
@@ -63,6 +95,8 @@ test('ambiguous refresh fails closed with no automatic replay', async ({ page, q
   await signIn(page, account)
   await expect(page.getByRole('alert')).toContainText('could not be refreshed safely', { timeout: 15000 })
   await expect(page.getByRole('heading', { name: 'Enterprise Portfolio Dashboard' })).toHaveCount(0)
-  await page.waitForTimeout(1500)
+  await page.reload()
+  await expect(page.getByRole('alert')).toContainText('could not be refreshed safely')
+  await expect(page.getByRole('heading', { name: 'Enterprise Portfolio Dashboard' })).toHaveCount(0)
   expect(attempts).toBe(1)
 })

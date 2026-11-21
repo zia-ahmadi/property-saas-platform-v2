@@ -44,6 +44,6 @@ it('keeps one lifecycle service through StrictMode subscription remounts', () =>
   const service = new AuthLifecycleService({ coordinator, clearCache: async () => {} })
   function Consumer() { const state = useSyncExternalStore(service.subscribe, service.getSnapshot); return <div>{state.status}</div> }
   const view = render(<StrictMode><Consumer /></StrictMode>)
-  expect(screen.getByText('anonymous')).toBeInTheDocument(); expect(coordinator.refresh).not.toHaveBeenCalled()
+  expect(screen.getByText('restoring')).toBeInTheDocument(); expect(coordinator.refresh).not.toHaveBeenCalled()
   view.unmount(); expect(coordinator.close).not.toHaveBeenCalled(); service.dispose()
 })

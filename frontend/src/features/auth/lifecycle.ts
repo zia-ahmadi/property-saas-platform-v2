@@ -1,9 +1,10 @@
 import { getSession, type LoginRequest, type SessionResponse } from './api'
-import { createAuthCoordinator, AuthCoordinationUnavailableError } from './coordination'
+import { createAuthCoordinator, AuthCoordinationUnavailableError, AuthRefreshRejectedError, AuthRefreshUnavailableError } from './coordination'
 import { ApiError } from '@/lib/api/errors'
 import { apiClient, type RequestOptions } from '@/lib/api/client'
 
 export type AuthState =
+  | { status: 'restoring' }
   | { status: 'anonymous'; message?: string }
   | { status: 'authenticating' }
   | { status: 'authenticated'; session: { readonly user: Readonly<SessionResponse['user']>; readonly organizations: readonly Readonly<SessionResponse['organizations'][number]>[] } }
@@ -16,6 +17,7 @@ type Dependencies = {
   coordinator: Coordinator
   clearCache: () => Promise<void>
   session?: typeof getSession
+  restoreOnStartup?: boolean
 }
 type Candidate = { token: string; expectedUser?: string; expiresAt: number }
 type OperationOptions = { signal?: AbortSignal }
@@ -31,7 +33,9 @@ function waitFor<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T | fals
 }
 
 export class AuthLifecycleService {
-  private state: AuthState = { status: 'anonymous' }
+  private state: AuthState
+  private startupAttempted = false
+  private startupRetry = false
   private listeners = new Set<() => void>()
   private generation = 0
   private token: string | undefined
@@ -46,6 +50,7 @@ export class AuthLifecycleService {
   private deps: Dependencies
   constructor(deps: Dependencies) {
     this.deps = deps
+    this.state = { status: deps.restoreOnStartup === false ? 'anonymous' : 'restoring' }
     this.session = deps.session ?? getSession
     this.unsubscribe = deps.coordinator.subscribe(() => { this.invalidate('Your session changed in another tab. Please sign in again.') })
   }
@@ -96,9 +101,39 @@ export class AuthLifecycleService {
       return false
     }
   }
+  restoreSession(): Promise<boolean> {
+    if (this.startupAttempted || this.state.status !== 'restoring' || this.disposed) {
+      return Promise.resolve(false)
+    }
+    this.startupAttempted = true
+    return this.restoreFromCookie()
+  }
+
+  private async restoreFromCookie(): Promise<boolean> {
+    const generation = ++this.generation
+    this.startupRetry = false
+    try {
+      const result = await this.deps.coordinator.refresh()
+      if (!this.valid(generation)) return false
+      return await this.verify({ token: result.accessToken, expiresAt: Date.now() + result.expiresIn * 1000 }, generation)
+    } catch (error) {
+      if (!this.valid(generation)) return false
+      if (error instanceof AuthRefreshRejectedError) {
+        this.set({ status: 'anonymous' })
+      } else if (error instanceof AuthRefreshUnavailableError) {
+        this.startupRetry = true
+        this.set({ status: 'network-error', message: 'Unable to restore your session. Check your connection and try again.' })
+      } else {
+        this.set({ status: 'recovery-required', message: 'Your session could not be refreshed safely. Please sign in again.' })
+      }
+      return false
+    }
+  }
+
   async signIn(credentials: LoginRequest, options: OperationOptions = {}): Promise<boolean> {
     if (this.disposed || options.signal?.aborted) return false
     const generation = ++this.generation
+    this.startupRetry = false
     this.set({ status: 'authenticating' })
     const cancel = () => { if (this.valid(generation)) this.invalidate() }
     options.signal?.addEventListener('abort', cancel, { once: true })
@@ -128,8 +163,7 @@ export class AuthLifecycleService {
     const generation = ++this.generation
     if (this.timer) clearTimeout(this.timer)
     this.timer = undefined
-    // A refresh only ever runs for an established session (proactive timer or a
-    // 401 retry). Keep that session and its in-memory bearer usable while the
+    // Keep an established session and its in-memory bearer usable while the
     // new token is negotiated so mounted queries, forms and dialogs are not torn
     // down; verify() atomically replaces the session once the token is confirmed.
     const flight = (async () => {
@@ -150,7 +184,12 @@ export class AuthLifecycleService {
     return waitFor(flight, options.signal)
   }
   retrySessionVerification(): Promise<boolean> {
-    if (this.state.status !== 'network-error' || !this.candidate || this.candidate.expiresAt <= Date.now()) {
+    if (this.state.status !== 'network-error') return Promise.resolve(false)
+    if (this.startupRetry) {
+      this.set({ status: 'restoring' })
+      return this.restoreFromCookie()
+    }
+    if (!this.candidate || this.candidate.expiresAt <= Date.now()) {
       this.invalidate('Please sign in again.')
       return Promise.resolve(false)
     }

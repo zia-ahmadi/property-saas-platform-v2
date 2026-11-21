@@ -1,8 +1,10 @@
+import { ApiError } from '@/lib/api/errors'
 import * as browserAuth from './api'
 import type { AccessTokenResponse, AuthRequestOptions, LoginRequest } from './api'
 
 const LOCK_NAME = 'property-saas:browser-auth'
 const CHANNEL_NAME = 'property-saas:session-events'
+const RECOVERY_KEY = 'property-saas:auth-recovery'
 const DEFAULT_TIMEOUT_MS = 30_000
 
 export type SessionEvent = 'logout' | 'session-changed'
@@ -35,11 +37,26 @@ export class AuthRefreshRecoveryRequiredError extends Error {
   }
 }
 
+export class AuthRefreshRejectedError extends Error {
+  constructor() {
+    super('The refresh session was rejected')
+    this.name = 'AuthRefreshRejectedError'
+  }
+}
+
+export class AuthRefreshUnavailableError extends Error {
+  constructor() {
+    super('Could not connect before sending the refresh request')
+    this.name = 'AuthRefreshUnavailableError'
+  }
+}
+
 type AuthTransport = Pick<typeof browserAuth, 'getCsrfToken' | 'login' | 'refresh' | 'logout'>
 type LockRequester = Pick<LockManager, 'request'>
 type EventChannel = Pick<BroadcastChannel, 'postMessage' | 'addEventListener' | 'removeEventListener' | 'close'>
 
 export interface CoordinatorDependencies {
+  recoveryStorage?: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
   transport?: AuthTransport
   locks?: LockRequester | null
   createChannel?: (() => EventChannel) | null
@@ -68,8 +85,12 @@ export function createAuthCoordinator(dependencies: CoordinatorDependencies = {}
     phase: 'waiting' | 'bootstrap' | 'dispatched' | 'settled'
   }
   let refreshInFlight: RefreshFlight | undefined
-  // In-memory only. The application must perform explicit recovery before clearing it.
+  // Explicit sign-in clears recovery. Storage carries only an operation marker across reloads.
   let refreshRecoveryRequired = false
+  const storage = dependencies.recoveryStorage
+  const clearRefreshMarker = () => {
+    if (storage?.getItem(RECOVERY_KEY) === 'refresh') storage.removeItem(RECOVERY_KEY)
+  }
 
   const receive = (event: MessageEvent<unknown>) => {
     const data = event.data
@@ -99,7 +120,10 @@ export function createAuthCoordinator(dependencies: CoordinatorDependencies = {}
     return Promise.resolve().then(() => locks.request(LOCK_NAME, { mode: 'exclusive', signal: controller.signal }, async () => {
       controller.signal.throwIfAborted()
       onBootstrap?.()
-      const { csrfToken } = await transport.getCsrfToken(requestOptions)
+      const { csrfToken } = await transport.getCsrfToken(requestOptions).catch(error => {
+        controller.signal.throwIfAborted()
+        throw error
+      })
       controller.signal.throwIfAborted()
       const result = await operation(csrfToken, requestOptions)
       controller.signal.throwIfAborted()
@@ -160,21 +184,34 @@ export function createAuthCoordinator(dependencies: CoordinatorDependencies = {}
       if (options?.signal?.aborted) return Promise.reject(options.signal.reason)
       if (options?.timeoutMs !== undefined && (!Number.isSafeInteger(options.timeoutMs) || options.timeoutMs <= 0)) return Promise.reject(new RangeError('timeoutMs must be a positive integer'))
       if (refreshRecoveryRequired) return Promise.reject(new AuthRefreshRecoveryRequiredError())
+      if (!refreshInFlight && storage?.getItem(RECOVERY_KEY)) return Promise.reject(new AuthRefreshRecoveryRequiredError())
       if (!refreshInFlight) {
         const controller = new AbortController()
         const flight: RefreshFlight = { controller, promise: undefined as unknown as Promise<AccessTokenResponse>, waiters: 0, settled: false, phase: 'waiting' }
         flight.promise = run(async (csrf, requestOptions) => {
+          if (storage?.getItem(RECOVERY_KEY) !== 'logout') storage?.setItem(RECOVERY_KEY, 'refresh')
           flight.phase = 'dispatched'
           try {
             const value = await transport.refresh(csrf, requestOptions)
             if (requestOptions.signal?.aborted) throw new AuthRefreshOutcomeUnknownError()
+            if (!refreshRecoveryRequired) clearRefreshMarker()
             return value
           } catch (error) {
+            if (!requestOptions.signal?.aborted && error instanceof ApiError && error.status === 401) {
+              clearRefreshMarker()
+              throw new AuthRefreshRejectedError()
+            }
             refreshRecoveryRequired = true
             if (requestOptions.signal?.aborted) throw new AuthRefreshOutcomeUnknownError()
             throw error
           }
-        }, { signal: controller.signal }, () => { flight.phase = 'bootstrap' })
+        }, { signal: controller.signal }, () => { flight.phase = 'bootstrap' }).catch(error => {
+          if (flight.phase !== 'dispatched' && (
+            (error instanceof ApiError && (error.isNetworkError || error.isTimeoutError)) ||
+            (error instanceof DOMException && error.name === 'TimeoutError')
+          )) throw new AuthRefreshUnavailableError()
+          throw error
+        })
         refreshInFlight = flight
         const clear = () => {
           flight.settled = true
@@ -190,9 +227,16 @@ export function createAuthCoordinator(dependencies: CoordinatorDependencies = {}
       if (closed) throw new AuthCoordinatorClosedError()
       if (refreshInFlight) throw new AuthRefreshRecoveryRequiredError()
       refreshRecoveryRequired = false
+      storage?.removeItem(RECOVERY_KEY)
     },
-    logout(options?: AuthRequestOptions) {
-      return run((csrf, requestOptions) => transport.logout(csrf, requestOptions), options)
+    async logout(options?: AuthRequestOptions) {
+      try {
+        storage?.setItem(RECOVERY_KEY, 'logout')
+      } catch {
+        // Still attempt server revocation if the browser cannot write the marker.
+      }
+      await run((csrf, requestOptions) => transport.logout(csrf, requestOptions), options)
+      storage?.removeItem(RECOVERY_KEY)
     },
     publish(type: SessionEvent) {
       if (closed) throw new AuthCoordinatorClosedError()

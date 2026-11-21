@@ -37,7 +37,7 @@ export async function signIn(page: Page, account: Account) {
   await expect(selection).toHaveValue(account.organizationId)
 }
 export async function visit(page: Page, path: string) {
-  // In-app history retains F3's memory-only session. Full reload deliberately signs out.
+  // Use in-app history to exercise navigation without starting cookie-based session restoration.
   await page.evaluate(path => { history.pushState(null, '', path); window.dispatchEvent(new PopStateEvent('popstate')) }, path)
 }
 export const propertyInput = { name: 'QA property', propertyType: 'HOUSE', addressLine1: 'Test street', addressLine2: null, city: 'Kabul', countryCode: 'AF' }

@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { OrganizationProvider } from './OrganizationProvider'
 import { useOrganization } from './context'
 import { hasPermission } from './permissions'
@@ -16,6 +16,8 @@ function Consumer() {
   const [result, setResult] = useState('')
   return <><span>{org.current?.organizationName ?? 'No organization'}</span><span>{org.can('PROPERTY_MANAGE') ? 'Can manage' : 'Read only'}</span><span>{org.forbidden ? 'Forbidden' : ''}</span><button onClick={() => org.select('two')}>Switch</button><button onClick={() => void org.request('get', '').then(() => setResult('Received data')).catch(() => setResult('Request rejected'))}>Request</button><span>{org.queryKey(['items']).join(':')}</span><span>{result}</span></>
 }
+afterEach(() => sessionStorage.clear())
+
 describe('organization context', () => {
   it('uses selected membership and its role for permissions and query keys', async () => {
     render(<OrganizationProvider><Consumer /></OrganizationProvider>); expect(screen.getByText('First')).toBeInTheDocument(); expect(screen.getByText('Can manage')).toBeInTheDocument()

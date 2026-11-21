@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { AuthLifecycleService } from './lifecycle'
 import { ApiError } from '@/lib/api/errors'
 import type { SessionResponse } from './api'
-import type { SessionEvent } from './coordination'
+import { AuthRefreshRejectedError, AuthRefreshUnavailableError, type SessionEvent } from './coordination'
 
 vi.mock('@/config/env', () => ({ API_BASE_URL: 'https://api.example.test' }))
 const session: SessionResponse = { user: { id: 'one', email: 'a@example.test', firstName: 'A', lastName: 'B' }, organizations: [] }
@@ -22,12 +22,53 @@ function setup() {
 }
 const credentials = { email: 'a@example.test', password: 'password' }
 describe('authentication lifecycle', () => {
-  it('starts anonymous without refresh and waits for session before publishing identity', async () => {
+  it('waits for verification before publishing the signed-in identity', async () => {
     const { service, coordinator, getSession } = setup(); const gate = deferred<SessionResponse>(); getSession.mockReturnValueOnce(gate.promise)
-    expect(service.getSnapshot().status).toBe('anonymous'); expect(coordinator.refresh).not.toHaveBeenCalled()
+    expect(service.getSnapshot().status).toBe('restoring'); expect(coordinator.refresh).not.toHaveBeenCalled()
     const login = service.signIn(credentials); await vi.waitFor(() => expect(getSession).toHaveBeenCalled())
     expect(service.getSnapshot().status).toBe('authenticating'); gate.resolve(session); expect(await login).toBe(true)
     expect(service.getSnapshot()).toEqual({ status: 'authenticated', session }); service.dispose()
+  })
+  it('restores once and waits for session verification before publishing identity', async () => {
+    const { service, coordinator, getSession } = setup()
+    const gate = deferred<SessionResponse>()
+    getSession.mockReturnValueOnce(gate.promise)
+    const restored = service.restoreSession()
+    await expect(service.restoreSession()).resolves.toBe(false)
+    expect(coordinator.refresh).toHaveBeenCalledOnce()
+    expect(getSession).toHaveBeenCalledWith(access.accessToken)
+    expect(service.getSnapshot().status).toBe('restoring')
+    gate.resolve(session)
+    await expect(restored).resolves.toBe(true)
+    expect(service.getSnapshot()).toEqual({ status: 'authenticated', session })
+    expect(coordinator.publish).not.toHaveBeenCalled()
+    service.dispose()
+  })
+  it('treats a rejected startup refresh as anonymous', async () => {
+    const { service, coordinator, getSession } = setup()
+    coordinator.refresh.mockRejectedValueOnce(new AuthRefreshRejectedError())
+    await expect(service.restoreSession()).resolves.toBe(false)
+    expect(service.getSnapshot().status).toBe('anonymous')
+    expect(getSession).not.toHaveBeenCalled()
+    service.dispose()
+  })
+  it('retries verification after a startup network error without repeating the rotation', async () => {
+    const { service, coordinator, getSession } = setup()
+    getSession.mockRejectedValueOnce(new ApiError({ message: 'offline', status: 0, isNetworkError: true }))
+    await expect(service.restoreSession()).resolves.toBe(false)
+    expect(service.getSnapshot().status).toBe('network-error')
+    await expect(service.retrySessionVerification()).resolves.toBe(true)
+    expect(coordinator.refresh).toHaveBeenCalledOnce()
+    service.dispose()
+  })
+  it('allows explicit retry of startup failure before refresh dispatch', async () => {
+    const { service, coordinator } = setup()
+    coordinator.refresh.mockRejectedValueOnce(new AuthRefreshUnavailableError())
+    await expect(service.restoreSession()).resolves.toBe(false)
+    expect(service.getSnapshot().status).toBe('network-error')
+    await expect(service.retrySessionVerification()).resolves.toBe(true)
+    expect(coordinator.refresh).toHaveBeenCalledTimes(2)
+    service.dispose()
   })
   it('reports invalid credentials without exposing details', async () => {
     const { service, coordinator } = setup(); coordinator.login.mockRejectedValueOnce(new ApiError({ message: 'secret', status: 401 }))
