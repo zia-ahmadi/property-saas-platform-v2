@@ -41,6 +41,7 @@ it('renders the shell landmarks and dashboard content without placeholder accoun
 it.each([
   { destination: 'Dashboard', heading: 'Enterprise Portfolio Dashboard' },
   { destination: 'Properties', heading: 'Properties' },
+  { destination: 'Renters', heading: 'Renter directory' },
   { destination: 'Settings', heading: 'Settings' },
 ])(
   'navigates to $destination and marks only that destination active',
@@ -149,7 +150,9 @@ it('opens a labelled mobile menu while retaining the desktop navigation', async 
   const dialog = await screen.findByRole('dialog', { name: 'Property SaaS navigation' })
   expect(trigger).toHaveAttribute('aria-expanded', 'true')
   expect(within(dialog).getByRole('navigation', { name: 'Mobile navigation' })).toBeInTheDocument()
-  expect(within(dialog).getAllByRole('link')).toHaveLength(3)
+  expect(within(dialog).getAllByRole('link').map(link => link.textContent)).toEqual([
+    'Dashboard', 'Properties', 'Renters', 'Settings',
+  ])
 })
 
 it('closes the mobile menu with its close button and restores trigger focus', async () => {

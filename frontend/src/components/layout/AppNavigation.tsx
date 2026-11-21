@@ -1,10 +1,11 @@
-import { Building2, LayoutDashboard, Settings } from 'lucide-react'
+import { Building2, LayoutDashboard, Settings, Users } from 'lucide-react'
 import { NavLink } from 'react-router'
 import { useOptionalOrganization } from '@/features/organization/context'
 
 const destinations = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/properties', label: 'Properties', icon: Building2, permission: 'PROPERTY_VIEW' as const },
+  { to: '/renters', label: 'Renters', icon: Users, permission: 'PROPERTY_VIEW' as const },
   { to: '/settings', label: 'Settings', icon: Settings, permission: 'ORGANIZATION_MANAGE' as const },
 ]
 

@@ -1,0 +1,203 @@
+openapi: 3.1.0
+info:
+  title: Property SaaS Renter API
+  version: 1.0.0
+  description: >
+    An active organization member can list and view renter profiles. Owners,
+    admins, and managers can also create, update, and archive profiles.
+    Profiles belong to the organization in the path and can exist independently
+    of leases. A renter ID outside that organization is returned as 404.
+security:
+  - bearerAuth: []
+paths:
+  /api/v1/organizations/{organizationId}/renters:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+    get:
+      operationId: listRenters
+      summary: Search and list active renters
+      description: Ordered by creation time descending, then ID descending.
+      parameters:
+        - name: search
+          in: query
+          description: Literal substring of full name, email, or phone. Name and email matching ignore case. Leading and trailing whitespace is trimmed.
+          schema: { type: string, maxLength: 254, default: '' }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+        - name: size
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 10 }
+      responses:
+        '200':
+          description: Page of active profiles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RenterPage'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      operationId: createRenter
+      summary: Create a renter profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/RenterFields'
+                - required: [firstName, lastName]
+      responses:
+        '201':
+          description: Profile created
+          headers:
+            Location:
+              description: Relative URL of the new profile
+              schema: { type: string, format: uri-reference }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Renter'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/v1/organizations/{organizationId}/renters/{renterId}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+      - $ref: '#/components/parameters/RenterId'
+    get:
+      operationId: getRenter
+      summary: Get an active or archived renter profile
+      responses:
+        '200': { $ref: '#/components/responses/Profile' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      operationId: updateRenter
+      summary: Edit an active renter profile
+      description: Omitted fields keep their current value. Send null or a blank string to clear email or phone.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/RenterFields'
+                - minProperties: 1
+      responses:
+        '200': { $ref: '#/components/responses/Profile' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: The renter is archived
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{organizationId}/renters/{renterId}/archive:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+      - $ref: '#/components/parameters/RenterId'
+    patch:
+      operationId: archiveRenter
+      summary: Archive a renter profile
+      description: Repeated requests return the same archived profile and record only the original archive event.
+      responses:
+        '200': { $ref: '#/components/responses/Profile' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    OrganizationId:
+      name: organizationId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    RenterId:
+      name: renterId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  responses:
+    Profile:
+      description: Renter profile
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Renter'
+    BadRequest:
+      description: Invalid input, identifier, or pagination
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Missing or invalid access token
+    Forbidden:
+      description: Active membership or write permission is required
+    NotFound:
+      description: No profile with that ID in the selected organization
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    RenterFields:
+      type: object
+      additionalProperties: false
+      description: String values are trimmed before validation. Whitespace-only names are invalid.
+      properties:
+        firstName: { type: string, minLength: 1, maxLength: 100 }
+        lastName: { type: string, minLength: 1, maxLength: 100 }
+        email:
+          oneOf:
+            - { type: string, format: email, maxLength: 254 }
+            - { type: string, pattern: '^\s*$', maxLength: 254 }
+            - { type: 'null' }
+        phone: { type: [string, 'null'], maxLength: 50 }
+    Renter:
+      type: object
+      required: [id, organizationId, firstName, lastName, email, phone, createdAt, updatedAt, archivedAt]
+      properties:
+        id: { type: string, format: uuid }
+        organizationId: { type: string, format: uuid }
+        firstName: { type: string }
+        lastName: { type: string }
+        email: { type: [string, 'null'], format: email }
+        phone: { type: [string, 'null'] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        archivedAt: { type: [string, 'null'], format: date-time }
+    RenterPage:
+      type: object
+      required: [content, page, size, totalElements, totalPages, first, last]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/Renter'
+        page: { type: integer }
+        size: { type: integer }
+        totalElements: { type: integer, format: int64 }
+        totalPages: { type: integer }
+        first: { type: boolean }
+        last: { type: boolean }
+    Error:
+      type: object
+      required: [timestamp, status, error, message, path]
+      properties:
+        timestamp: { type: string, format: date-time }
+        status: { type: integer }
+        error: { type: string }
+        message: { type: string }
+        path: { type: string }

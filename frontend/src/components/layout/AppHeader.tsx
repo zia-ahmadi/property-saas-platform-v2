@@ -11,15 +11,17 @@ export function AppHeader() {
   const auth = useOptionalAuth()
   const organization = useOptionalOrganization()
   const [warning, setWarning] = useState(false)
-  const title = matchPath('/properties/:propertyId/units/*', pathname)
-    ? 'Units'
-    : matchPath('/properties/:propertyId', pathname)
-      ? 'Property Details'
-      : matchPath('/properties', pathname)
-        ? 'Properties'
-        : matchPath('/settings', pathname)
-          ? 'Settings'
-          : 'Dashboard'
+  const title = matchPath('/renters/*', pathname)
+    ? 'Renters'
+    : matchPath('/properties/:propertyId/units/*', pathname)
+      ? 'Units'
+      : matchPath('/properties/:propertyId', pathname)
+        ? 'Property Details'
+        : matchPath('/properties', pathname)
+          ? 'Properties'
+          : matchPath('/settings', pathname)
+            ? 'Settings'
+            : 'Dashboard'
 
   return (
     <header className="flex min-h-16 min-w-0 flex-wrap items-center justify-between gap-4 border-b bg-card px-4 py-3 text-card-foreground sm:px-6 lg:px-8">

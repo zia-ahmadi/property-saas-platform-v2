@@ -5,6 +5,8 @@ import { DashboardPage } from '@/pages/DashboardPage'
 import { PropertiesPage } from '@/pages/PropertiesPage'
 import { PropertyDetailsPage } from '@/pages/PropertyDetailsPage'
 import { PropertyFormPage } from '@/pages/PropertyFormPage'
+import { RentersPage } from '@/pages/RentersPage'
+import { RenterProfilePage } from '@/pages/RenterProfilePage'
 import { UnitsPage } from '@/pages/UnitsPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
@@ -31,6 +33,8 @@ export function AppRouter() {
               <Route path="/dashboard" element={<DashboardPage />} />
             </Route>
             <Route element={<OrganizationRoute permission="PROPERTY_VIEW" />}>
+              <Route path="/renters" element={<RentersPage />} />
+              <Route path="/renters/:renterId" element={<RenterProfilePage />} />
               <Route path="/properties" element={<PropertiesPage />} />
               <Route path="/properties/:propertyId" element={<PropertyDetailsPage />} />
               <Route path="/properties/:propertyId/units" element={<UnitsPage />} />
@@ -40,6 +44,8 @@ export function AppRouter() {
               />
             </Route>
             <Route element={<OrganizationRoute permission="PROPERTY_MANAGE" />}>
+              <Route path="/renters/new" element={<RenterProfilePage mode="create" />} />
+              <Route path="/renters/:renterId/edit" element={<RenterProfilePage mode="edit" />} />
               <Route
                 path="/properties/:propertyId/units/new"
                 element={<UnitsPage mode="create" />}

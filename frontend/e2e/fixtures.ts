@@ -85,7 +85,20 @@ export const test = base.extend<{ qa: {
       if (accounts.length) {
         const orgs = accounts.map(a => `'${uuid(a.organizationId)}'`).join(',')
         const users = accounts.map(a => `'${uuid(a.userId)}'`).join(',')
-        sql(`BEGIN; DELETE FROM units WHERE property_id IN (SELECT id FROM properties WHERE organization_id IN (${orgs})); DELETE FROM properties WHERE organization_id IN (${orgs}); DELETE FROM organization_memberships WHERE organization_id IN (${orgs}) OR user_id IN (${users}); DELETE FROM users WHERE id IN (${users}); DELETE FROM organizations WHERE id IN (${orgs}); COMMIT;`)
+        sql(`
+          BEGIN;
+          DELETE FROM renter_audit_events WHERE organization_id IN (${orgs});
+          DELETE FROM renters WHERE organization_id IN (${orgs});
+          DELETE FROM units WHERE property_id IN (
+            SELECT id FROM properties WHERE organization_id IN (${orgs})
+          );
+          DELETE FROM properties WHERE organization_id IN (${orgs});
+          DELETE FROM organization_memberships
+            WHERE organization_id IN (${orgs}) OR user_id IN (${users});
+          DELETE FROM users WHERE id IN (${users});
+          DELETE FROM organizations WHERE id IN (${orgs});
+          COMMIT;
+        `)
       }
     }
   },
