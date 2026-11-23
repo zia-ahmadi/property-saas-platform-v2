@@ -23,13 +23,21 @@ class RolePermissionMappingTest {
     }
 
     @Test
-    void adminShouldHaveMembershipManagementPermission() {
-        assertTrue(
+    void adminShouldNotHaveMembershipManagementPermission() {
+        assertFalse(
                 RolePermissionMapping.hasPermission(
                         MembershipRole.ADMIN,
                         OrganizationPermission.MEMBERSHIP_MANAGE
                 )
         );
+    }
+
+    @Test
+    void onlyOwnerShouldManageMemberships() {
+        for (MembershipRole role : MembershipRole.values()) {
+            assertEquals(role == MembershipRole.OWNER,
+                    RolePermissionMapping.hasPermission(role, OrganizationPermission.MEMBERSHIP_MANAGE));
+        }
     }
 
     @Test

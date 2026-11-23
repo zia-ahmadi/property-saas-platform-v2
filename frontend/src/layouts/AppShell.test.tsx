@@ -151,7 +151,7 @@ it('opens a labelled mobile menu while retaining the desktop navigation', async 
   expect(trigger).toHaveAttribute('aria-expanded', 'true')
   expect(within(dialog).getByRole('navigation', { name: 'Mobile navigation' })).toBeInTheDocument()
   expect(within(dialog).getAllByRole('link').map(link => link.textContent)).toEqual([
-    'Dashboard', 'Properties', 'Renters', 'Settings',
+    'Dashboard', 'Properties', 'Renters', 'Organization access', 'Team', 'Inbox', 'Settings',
   ])
 })
 

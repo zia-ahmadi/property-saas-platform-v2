@@ -24,7 +24,6 @@ public final class RolePermissionMapping {
                 EnumSet.of(
                         OrganizationPermission.ORGANIZATION_VIEW,
                         OrganizationPermission.ORGANIZATION_MANAGE,
-                        OrganizationPermission.MEMBERSHIP_MANAGE,
                         OrganizationPermission.PROPERTY_VIEW,
                         OrganizationPermission.PROPERTY_MANAGE,
                         OrganizationPermission.LEASE_MANAGE,

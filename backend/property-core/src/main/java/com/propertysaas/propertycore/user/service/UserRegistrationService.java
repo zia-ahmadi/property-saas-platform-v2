@@ -85,6 +85,8 @@ public class UserRegistrationService {
                 slug
         );
 
+        organization.markPendingReview();
+
         userRepository.save(user);
         organizationRepository.save(organization);
 

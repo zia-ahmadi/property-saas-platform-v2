@@ -55,6 +55,6 @@ describe('organization context', () => {
     expect(mocks.auth.service.request).not.toHaveBeenCalled()
   })
   it('matches the backend roles and fails closed on missing roles', () => {
-    expect(hasPermission('OWNER', 'BILLING_MANAGE')).toBe(true); expect(hasPermission('ADMIN', 'MEMBERSHIP_MANAGE')).toBe(true); expect(hasPermission('MANAGER', 'BILLING_MANAGE')).toBe(false); expect(hasPermission('STAFF', 'PROPERTY_MANAGE')).toBe(false); expect(hasPermission(undefined, 'PROPERTY_VIEW')).toBe(false)
+    expect(hasPermission('OWNER', 'BILLING_MANAGE')).toBe(true); expect(hasPermission('ADMIN', 'MEMBERSHIP_MANAGE')).toBe(false); expect(hasPermission('MANAGER', 'BILLING_MANAGE')).toBe(false); expect(hasPermission('STAFF', 'PROPERTY_MANAGE')).toBe(false); expect(hasPermission(undefined, 'PROPERTY_VIEW')).toBe(false)
   })
 })

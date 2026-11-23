@@ -1,0 +1,238 @@
+openapi: 3.0.3
+info:
+  title: Platform administration and team API
+  version: 0.1.0
+  description: Work in progress. Platform authority and active organization OWNER membership are checked against current database state.
+servers:
+  - url: /api/v1
+security:
+  - bearerAuth: []
+paths:
+  /my-organizations/status:
+    get:
+      summary: List the caller's restricted organizations and current statuses
+      responses:
+        '200': { description: Restricted organizations }
+  /my-organizations/{id}/messages:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      summary: List the organization owner conversation, including for restricted organizations
+      responses:
+        '200': { description: Conversation }
+        '403': { description: Active owner membership required }
+    post:
+      summary: Send a message to platform owners
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body: { type: string, minLength: 1, maxLength: 5000 }
+      responses:
+        '201': { description: Message sent }
+  /my-organizations/{id}/messages/{messageId}/read:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - { name: messageId, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      summary: Mark a platform message as read by the organization
+      responses:
+        '204': { description: Marked read }
+  /platform/organizations/{id}/messages/{messageId}/read:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - { name: messageId, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      summary: Mark an organization message as read by the platform
+      responses:
+        '204': { description: Marked read }
+  /platform/me:
+    get:
+      summary: Check platform owner access
+      responses:
+        '200': { description: Platform owner }
+        '403': { description: Access denied }
+  /platform/organizations:
+    get:
+      summary: List organizations
+      parameters:
+        - { name: search, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string, enum: [pending, active, rejected, suspended, banned] } }
+        - { name: page, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+        - { name: size, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses:
+        '200': { description: Paginated organization list }
+  /platform/organizations/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      summary: Organization detail
+      responses:
+        '200': { description: Organization }
+        '404': { description: Not found }
+  /platform/organizations/{id}/audit:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      summary: Status decision history
+      responses:
+        '200': { description: Decision audit entries }
+  /platform/organizations/{id}/decisions:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      summary: Review or change organization status
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action: { type: string, enum: [approve, reject, suspend, reinstate, ban] }
+                reason: { type: string, maxLength: 2000, description: Required for reject, suspend, and ban }
+      responses:
+        '200': { description: Decision recorded }
+        '400': { description: Invalid decision or missing reason }
+        '409': { description: Invalid transition }
+  /platform/organizations/{id}/messages:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      summary: List the organization conversation
+      responses:
+        '200': { description: Conversation }
+    post:
+      summary: Send an organization a private message
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body: { type: string, minLength: 1, maxLength: 5000 }
+      responses:
+        '201': { description: Message created }
+  /organizations/{id}/inbox:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      summary: List messages for an organization owner
+      responses:
+        '200': { description: Messages including read timestamps }
+  /organizations/{id}/inbox/{messageId}/read:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - { name: messageId, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      summary: Mark a message read
+      responses:
+        '204': { description: Marked read }
+        '404': { description: Message not found }
+  /organizations/{id}/team:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      summary: List members and pending invitations
+      responses:
+        '200': { description: Team }
+  /organizations/{id}/invitations:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      summary: Create a seven-day invitation
+      description: Returns a secret token once. Delivery is not configured; share it securely.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, role]
+              properties:
+                email: { type: string, format: email, maxLength: 320 }
+                role: { $ref: '#/components/schemas/AssignableRole' }
+      responses:
+        '201': { description: Invitation and one-time token }
+  /organizations/{id}/invitations/{invitationId}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - { name: invitationId, in: path, required: true, schema: { type: string, format: uuid } }
+    delete:
+      summary: Cancel an invitation
+      responses:
+        '204': { description: Cancelled }
+        '404': { description: Not found }
+  /organizations/{id}/members/{memberId}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - { name: memberId, in: path, required: true, schema: { type: string, format: uuid } }
+    patch:
+      summary: Change a non-owner member role
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role: { $ref: '#/components/schemas/AssignableRole' }
+      responses:
+        '200': { description: Role changed }
+    delete:
+      summary: Revoke a non-owner membership
+      responses:
+        '204': { description: Revoked }
+  /invitations/accept:
+    post:
+      summary: Accept as an authenticated user whose email matches
+      requestBody:
+        $ref: '#/components/requestBodies/Token'
+      responses:
+        '200': { description: Invitation accepted }
+        '409': { description: Invalid, expired, used, or unavailable invitation }
+  /invitations/accept-new:
+    post:
+      security: []
+      summary: Create an account and accept an invitation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, email, password, firstName, lastName]
+              properties:
+                token: { type: string }
+                email: { type: string, format: email, maxLength: 320 }
+                password: { type: string, minLength: 12, maxLength: 72 }
+                firstName: { type: string, maxLength: 100 }
+                lastName: { type: string, maxLength: 100 }
+      responses:
+        '201': { description: Account created and invitation accepted }
+        '409': { description: Account exists or invitation unavailable }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    Id: { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+  schemas:
+    AssignableRole: { type: string, enum: [ADMIN, MANAGER, STAFF] }
+  requestBodies:
+    Token:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [token]
+            properties:
+              token: { type: string }

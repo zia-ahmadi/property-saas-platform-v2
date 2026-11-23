@@ -57,6 +57,8 @@ export const test = base.extend<{ qa: {
       expect(result.status()).toBe(201)
       const created = { ...input, ...await result.json() } as Account
       accounts.push(created)
+      // Most regression fixtures exercise active tenants; registration review has separate tests.
+      sql(`UPDATE organizations SET status='active' WHERE id='${uuid(created.organizationId)}';`)
       if (role !== 'OWNER') sql(`UPDATE organization_memberships SET role='${role.toLowerCase()}' WHERE user_id='${uuid(created.userId)}' AND organization_id='${uuid(created.organizationId)}';`)
       return created
     }

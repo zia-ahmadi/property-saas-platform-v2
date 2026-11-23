@@ -20,7 +20,7 @@ class RenterMigrationIntegrationTest {
     void upgradesVersionFiveWithExistingOrganization() {
         String schema = "renter_migration_" + UUID.randomUUID().toString().replace("-", "");
         Flyway before = Flyway.configure().dataSource(dataSource).schemas(schema).target("5").load();
-        Flyway after = Flyway.configure().dataSource(dataSource).schemas(schema).cleanDisabled(false).load();
+        Flyway after = Flyway.configure().dataSource(dataSource).schemas(schema).target("6").cleanDisabled(false).load();
         UUID org = UUID.randomUUID();
         UUID renter = UUID.randomUUID();
         try {
@@ -38,6 +38,9 @@ class RenterMigrationIntegrationTest {
                     String.class, org));
             assertEquals(org, jdbc.queryForObject("select organization_id from " + schema + ".renters where id = ?",
                     UUID.class, renter));
+            Flyway latest = Flyway.configure().dataSource(dataSource).schemas(schema).cleanDisabled(false).load();
+            assertEquals(3, latest.migrate().migrationsExecuted);
+            assertEquals("active", jdbc.queryForObject("select status from " + schema + ".organizations where id = ?", String.class, org));
         } finally {
             after.clean();
         }

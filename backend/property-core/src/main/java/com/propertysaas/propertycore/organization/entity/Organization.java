@@ -49,6 +49,10 @@ public class Organization {
         this.status = OrganizationStatus.ACTIVE;
     }
 
+    public void markPendingReview() {
+        this.status = OrganizationStatus.PENDING;
+    }
+
     public UUID getId() {
         return id;
     }

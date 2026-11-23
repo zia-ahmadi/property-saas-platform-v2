@@ -85,12 +85,12 @@ try {
     const fd = openSync(path.join(logs, 'backend-tests.log'), 'a', 0o600)
     try { await run('./mvnw', ['-o', 'test'], { cwd: backend, env, stdio: ['ignore', fd, fd] }) } finally { closeSync(fd) }
   }
-  const api = server('./mvnw', ['-o', 'spring-boot:run'], 'backend.log', { cwd: backend, env: { ...env, SPRING_PROFILES_ACTIVE: 'development', BROWSER_DEV_ALLOWED_ORIGINS: env.QA_APP_URL, SERVER_PORT: String(apiPort), APP_JWT_ACCESS_TOKEN_EXPIRATION: '35' } })
+  const api = server('./mvnw', ['-o', 'spring-boot:run'], 'backend.log', { cwd: backend, env: { ...env, SPRING_PROFILES_ACTIVE: 'development', BROWSER_DEV_ALLOWED_ORIGINS: env.QA_APP_URL, SERVER_PORT: String(apiPort), APP_JWT_ACCESS_TOKEN_EXPIRATION: process.env.QA_ACCESS_TOKEN_EXPIRATION ?? '35' } })
   await waitFor(`${env.QA_API_URL}/api/v1/browser-auth/session`, api)
   const web = server('npm', ['run', 'dev', '--', '--host', 'localhost', '--port', String(appPort), '--strictPort'], 'frontend.log', { cwd: frontend, env: { ...env, VITE_API_BASE_URL: env.QA_API_URL } })
   await waitFor(env.QA_APP_URL, web)
   console.log(`QA uses disposable PostgreSQL and local servers. Logs: ${path.relative(frontend, logs)}`)
-  await run('npx', ['playwright', 'test'], { env })
+  await run('npx', ['playwright', 'test', ...(process.env.QA_SPEC ? [process.env.QA_SPEC] : [])], { env })
   if (process.argv.includes('--cdp')) {
     await run('node', ['scripts/auth-browser-integration.mjs'], { env: { ...env, AUTH_API_URL: env.QA_API_URL, AUTH_APP_URL: env.QA_APP_URL } })
     await run('node', ['scripts/dashboard-browser-integration.mjs'], { env: { ...env, F6_API_URL: env.QA_API_URL, F6_APP_URL: env.QA_APP_URL } })
