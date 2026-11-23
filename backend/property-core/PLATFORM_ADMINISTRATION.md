@@ -31,13 +31,13 @@ Access to this SQL operation must be restricted and logged by the operator. To r
 
 All routes use `/api/v1`. Platform endpoints require a valid access token for an active user with the platform authority. Team and inbox endpoints require a current active OWNER membership in an active organization.
 
-* `GET /platform/me`, `GET /platform/organizations?search=&status=&page=0&size=20`, `GET /platform/organizations/{id}`, `GET /platform/organizations/{id}/audit`.
+* `GET /platform/me`, `GET /platform/summary`, `GET /platform/organizations?search=&status=&unreadOnly=false&page=0&size=20`, `GET /platform/organizations/{id}`, `GET /platform/organizations/{id}/audit`. The summary reports total, active, pending, restricted, and unread-message counts. Directory and detail results include the active owner (when assigned), active member and property counts, and unread organization-message count. Set `unreadOnly=true` to find organizations waiting on a platform response.
 * `POST /platform/organizations/{id}/decisions` accepts `{ "action": "approve|reject|suspend|reinstate|ban", "reason": "..." }`. Reject, suspend and ban require a reason. Transitions are pending → active/rejected/banned; active → suspended/banned; suspended → active/banned. Rejected and banned are terminal.
 * `POST /platform/organizations/{id}/messages` accepts `{ "body": "..." }`. `GET /organizations/{id}/inbox` and `POST /organizations/{id}/inbox/{messageId}/read` provide an organization-scoped inbox.
 * `GET /organizations/{id}/team`; `POST /organizations/{id}/invitations` accepts `{ "email": "...", "role": "ADMIN|MANAGER|STAFF" }`; `DELETE /organizations/{id}/invitations/{invitationId}`; `PATCH /organizations/{id}/members/{membershipId}` accepts `{ "role": "..." }`; `DELETE /organizations/{id}/members/{membershipId}`.
 * Invitations expire after seven days. The invitation response includes a bearer secret in `token`: delivery is not configured, so the owner must share it securely. `POST /invitations/accept` accepts `{ "token": "..." }` for an authenticated matching user; `POST /invitations/accept-new` accepts the token plus `email`, `password`, `firstName`, and `lastName`. Only the token hash is stored. Owner memberships cannot currently be altered or revoked through these endpoints.
 
-The browser provides a platform console, Team page, invitation acceptance, and owner inbox. Invitation links contain a bearer token in the URL fragment; share them privately. Email delivery is not configured.
+The browser provides a platform workspace with organization search and status filters, owner and portfolio context, status history, and private support conversations, plus the organization Team page, invitation acceptance, and owner inbox. Invitation links contain a bearer token in the URL fragment; share them privately. Email delivery is not configured.
 
 ## Manual API checks
 

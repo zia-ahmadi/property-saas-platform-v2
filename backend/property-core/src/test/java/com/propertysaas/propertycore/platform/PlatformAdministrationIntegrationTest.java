@@ -43,6 +43,36 @@ class PlatformAdministrationIntegrationTest {
         mvc.perform(get("/api/v1/organizations/{id}/inbox",org).with(ownerJwt)).andExpect(status().isOk()).andExpect(jsonPath("$[0].body").value("private"));
         mvc.perform(get("/api/v1/organizations/{id}/inbox",other).with(ownerJwt)).andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
     }
+    @Test void platformDirectoryIncludesOrganizationContextAndSummaryCounts() throws Exception {
+        UUID owner=UUID.randomUUID(), member=UUID.randomUUID(), platform=UUID.randomUUID(), org=UUID.randomUUID();
+        for (UUID u : new UUID[]{owner,member,platform}) db.update("insert into users(id,email,password_hash,first_name,last_name) values (?,?, 'hash',?,?)",u,u+"@example.test",u.equals(owner)?"Owner":"Test",u.equals(owner)?"Person":"User");
+        db.update("insert into organizations(id,name,slug) values (?, 'Directory test','directory-test')",org);
+        db.update("insert into organization_memberships(id,organization_id,user_id,role) values (?,?,?,'owner'), (?,?,?,'staff')",UUID.randomUUID(),org,owner,UUID.randomUUID(),org,member);
+        db.update("insert into properties(organization_id,name,property_type,address_line1,city,country_code) values (?,'Test property','apartment','1 Main St','Test City','US')",org);
+        db.update("insert into platform_authorities(user_id,authority) values (?,'PLATFORM_OWNER')",platform);
+        db.update("insert into organization_messages(id,organization_id,sender_user_id,body,direction) values (?,?,?,'Need help','organization_to_platform')",UUID.randomUUID(),org,owner);
+        var platformJwt=SecurityMockMvcRequestPostProcessors.jwt().jwt(j -> j.subject(platform.toString()));
+        mvc.perform(get("/api/v1/platform/organizations").with(platformJwt))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].owner_first_name").value("Owner"))
+                .andExpect(jsonPath("$.content[0].owner_email").value(owner+"@example.test"))
+                .andExpect(jsonPath("$.content[0].member_count").value(2))
+                .andExpect(jsonPath("$.content[0].property_count").value(1))
+                .andExpect(jsonPath("$.content[0].unread_message_count").value(1));
+        mvc.perform(get("/api/v1/platform/organizations").param("unreadOnly","true").with(platformJwt))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(org.toString()));
+        mvc.perform(get("/api/v1/platform/organizations/{id}",org).with(platformJwt))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.member_count").value(2))
+                .andExpect(jsonPath("$.property_count").value(1));
+        mvc.perform(get("/api/v1/platform/summary").with(platformJwt))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total_organizations").value(1))
+                .andExpect(jsonPath("$.active_organizations").value(1))
+                .andExpect(jsonPath("$.unread_messages").value(1));
+    }
     @Test void invitationsAndLiveRoleChanges() throws Exception {
         UUID owner=UUID.randomUUID(), invited=UUID.randomUUID(), org=UUID.randomUUID();
         for (UUID u : new UUID[]{owner,invited}) db.update("insert into users(id,email,password_hash,first_name,last_name) values (?,?, 'hash','Test','User')",u,u+"@example.test");

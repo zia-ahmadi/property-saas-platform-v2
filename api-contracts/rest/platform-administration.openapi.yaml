@@ -56,21 +56,50 @@ paths:
       responses:
         '200': { description: Platform owner }
         '403': { description: Access denied }
+  /platform/summary:
+    get:
+      summary: Get platform organization and unread support totals
+      responses:
+        '200':
+          description: Current counts for organizations and unread organization messages
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_organizations: { type: integer, format: int64 }
+                  active_organizations: { type: integer, format: int64 }
+                  pending_organizations: { type: integer, format: int64 }
+                  restricted_organizations: { type: integer, format: int64 }
+                  unread_messages: { type: integer, format: int64 }
   /platform/organizations:
     get:
-      summary: List organizations
+      summary: List organizations with owner, portfolio, and unread support context
       parameters:
         - { name: search, in: query, schema: { type: string } }
         - { name: status, in: query, schema: { type: string, enum: [pending, active, rejected, suspended, banned] } }
+        - { name: unreadOnly, in: query, schema: { type: boolean, default: false, description: Only organizations with unread organization-to-platform messages } }
         - { name: page, in: query, schema: { type: integer, minimum: 0, default: 0 } }
         - { name: size, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
       responses:
-        '200': { description: Paginated organization list }
+        '200':
+          description: Paginated organization directory
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  content:
+                    type: array
+                    items: { $ref: '#/components/schemas/PlatformOrganization' }
+                  total: { type: integer, format: int64 }
+                  page: { type: integer }
+                  size: { type: integer }
   /platform/organizations/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
     get:
-      summary: Organization detail
+      summary: Organization details with owner, portfolio, and unread support context
       responses:
         '200': { description: Organization }
         '404': { description: Not found }
@@ -226,6 +255,21 @@ components:
     Id: { name: id, in: path, required: true, schema: { type: string, format: uuid } }
   schemas:
     AssignableRole: { type: string, enum: [ADMIN, MANAGER, STAFF] }
+    PlatformOrganization:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        slug: { type: string }
+        status: { type: string, enum: [pending, active, rejected, suspended, banned] }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        owner_first_name: { type: string, nullable: true }
+        owner_last_name: { type: string, nullable: true }
+        owner_email: { type: string, format: email, nullable: true }
+        member_count: { type: integer, format: int64 }
+        property_count: { type: integer, format: int64 }
+        unread_message_count: { type: integer, format: int64 }
   requestBodies:
     Token:
       required: true

@@ -33,6 +33,27 @@ public class PlatformAdministrationController {
     public record OrganizationPage(List<Map<String, Object>> content, long total, int page, int size) { }
     public record Decision(@NotBlank String action, @Size(max = 2000) String reason) { }
     public record MessageInput(@NotBlank @Size(max = 5000) String body) { }
+    private static final String ORGANIZATION_DIRECTORY_SELECT = """
+            SELECT o.id, o.name, o.slug, o.status, o.created_at, o.updated_at,
+                   owner.first_name AS owner_first_name, owner.last_name AS owner_last_name,
+                   owner.email AS owner_email,
+                   (SELECT count(*) FROM organization_memberships m
+                    JOIN users u ON u.id = m.user_id
+                    WHERE m.organization_id = o.id AND m.status = 'active' AND u.status = 'active') AS member_count,
+                   (SELECT count(*) FROM properties p WHERE p.organization_id = o.id) AS property_count,
+                   (SELECT count(*) FROM organization_messages msg
+                    WHERE msg.organization_id = o.id AND msg.direction = 'organization_to_platform'
+                      AND msg.platform_read_at IS NULL) AS unread_message_count
+            FROM organizations o
+            LEFT JOIN LATERAL (
+                SELECT u.first_name, u.last_name, u.email
+                FROM organization_memberships m
+                JOIN users u ON u.id = m.user_id
+                WHERE m.organization_id = o.id AND m.role = 'owner' AND m.status = 'active' AND u.status = 'active'
+                ORDER BY m.created_at, m.id
+                LIMIT 1
+            ) owner ON true
+            """;
     @GetMapping("/my-organizations/status")
     public List<Map<String, Object>> myOrganizationStatuses() {
         UUID user = currentUser.getCurrentUserId();
@@ -40,22 +61,36 @@ public class PlatformAdministrationController {
     }
     @GetMapping("/platform/me")
     public Map<String, Boolean> platformMe() { requirePlatformOwner(); return Map.of("platformOwner", true); }
+    @GetMapping("/platform/summary")
+    public Map<String, Long> summary() {
+        requirePlatformOwner();
+        return db.queryForMap("""
+                SELECT
+                    (SELECT count(*) FROM organizations) AS total_organizations,
+                    (SELECT count(*) FROM organizations WHERE status = 'active') AS active_organizations,
+                    (SELECT count(*) FROM organizations WHERE status = 'pending') AS pending_organizations,
+                    (SELECT count(*) FROM organizations WHERE status IN ('suspended', 'banned')) AS restricted_organizations,
+                    (SELECT count(*) FROM organization_messages
+                     WHERE direction = 'organization_to_platform' AND platform_read_at IS NULL) AS unread_messages
+                """).entrySet().stream().collect(java.util.stream.Collectors.toMap(
+                Map.Entry::getKey, entry -> ((Number) entry.getValue()).longValue()));
+    }
     @GetMapping("/platform/organizations")
-    public OrganizationPage organizations(@RequestParam(defaultValue = "") String search, @RequestParam(required = false) String status, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
+    public OrganizationPage organizations(@RequestParam(defaultValue = "") String search, @RequestParam(required = false) String status, @RequestParam(defaultValue = "false") boolean unreadOnly, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
         requirePlatformOwner();
         if (page < 0 || size < 1 || size > 100 || page > 1000000) throw new IllegalArgumentException("Invalid pagination");
         String filter = status == null || status.isBlank() ? null : status.toLowerCase(Locale.ROOT);
         if (filter != null && !Set.of("pending", "active", "rejected", "suspended", "banned").contains(filter)) throw new IllegalArgumentException("Invalid status");
         String pattern = "%" + search.toLowerCase(Locale.ROOT).replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
-        String where = " WHERE (lower(name) LIKE ? ESCAPE '\\' OR lower(slug) LIKE ? ESCAPE '\\') AND (CAST(? AS varchar) IS NULL OR status = ?)";
-        Long total = db.queryForObject("SELECT count(*) FROM organizations" + where, Long.class, pattern, pattern, filter, filter);
-        var rows = db.queryForList("SELECT id, name, slug, status, created_at, updated_at FROM organizations" + where + " ORDER BY created_at DESC, id LIMIT ? OFFSET ?", pattern, pattern, filter, filter, size, (long) page * size);
+        String where = " WHERE (lower(o.name) LIKE ? ESCAPE '\\' OR lower(o.slug) LIKE ? ESCAPE '\\') AND (CAST(? AS varchar) IS NULL OR o.status = ?) AND (? = false OR EXISTS (SELECT 1 FROM organization_messages msg WHERE msg.organization_id = o.id AND msg.direction = 'organization_to_platform' AND msg.platform_read_at IS NULL))";
+        Long total = db.queryForObject("SELECT count(*) FROM organizations o" + where, Long.class, pattern, pattern, filter, filter, unreadOnly);
+        var rows = db.queryForList(ORGANIZATION_DIRECTORY_SELECT + where + " ORDER BY o.created_at DESC, o.id LIMIT ? OFFSET ?", pattern, pattern, filter, filter, unreadOnly, size, (long) page * size);
         return new OrganizationPage(rows, total == null ? 0 : total, page, size);
     }
     @GetMapping("/platform/organizations/{id}")
     public Map<String, Object> organization(@PathVariable UUID id) {
         requirePlatformOwner();
-        var rows = db.queryForList("SELECT id, name, slug, status, created_at, updated_at FROM organizations WHERE id = ?", id);
+        var rows = db.queryForList(ORGANIZATION_DIRECTORY_SELECT + " WHERE o.id = ?", id);
         if (rows.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Organization not found");
         return rows.get(0);
     }
