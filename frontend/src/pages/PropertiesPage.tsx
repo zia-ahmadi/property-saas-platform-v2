@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/ui/empty-state'
 import { ErrorState } from '@/components/ui/error-state'
 import { Skeleton } from '@/components/ui/skeleton'
+import { OrganizationImage } from '@/components/OrganizationImage'
 
 export function PropertiesPage() {
   const org = useOrganization()
@@ -182,6 +183,11 @@ export function PropertiesPage() {
               {properties.map((property) => (
                 <li key={property.id} className="min-w-0">
                   <Card className="group h-full gap-5 rounded-2xl border-border/70 p-5 transition duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md motion-reduce:transform-none motion-reduce:transition-none">
+                    <OrganizationImage
+                      resourceType="property"
+                      resourceId={property.id}
+                      alt={`${property.name} property`}
+                    />
                     <div className="flex items-start justify-between gap-3">
                       <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/5 text-primary ring-1 ring-primary/10">
                         <Building2 aria-hidden="true" className="size-5" />

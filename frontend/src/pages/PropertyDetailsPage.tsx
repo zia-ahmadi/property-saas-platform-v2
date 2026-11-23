@@ -9,6 +9,7 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { OrganizationImage } from '@/components/OrganizationImage'
 
 export function PropertyDetailsPage() {
   const { propertyId = '' } = useParams()
@@ -93,6 +94,13 @@ export function PropertyDetailsPage() {
       )}
       {property && (
         <>
+          <OrganizationImage
+            resourceType="property"
+            resourceId={property.id}
+            alt={`${property.name} property`}
+            canManage={org.can('PROPERTY_MANAGE')}
+            editable={property.status === 'ACTIVE'}
+          />
           <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 p-5 text-white shadow-lg sm:p-8">
             <div
               aria-hidden="true"

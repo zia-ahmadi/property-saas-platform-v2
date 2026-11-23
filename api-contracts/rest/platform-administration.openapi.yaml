@@ -115,6 +115,7 @@ paths:
       - $ref: '#/components/parameters/Id'
     post:
       summary: Review or change organization status
+      description: Reinstating a suspended or banned organization restores access by setting its status to active. Existing organization data is retained.
       requestBody:
         required: true
         content:

@@ -82,6 +82,50 @@ it('keeps the directory visible and explains when the summary endpoint is unavai
   expect(screen.getByRole('status')).toHaveTextContent('The backend does not provide platform summary yet')
 })
 
+it('lets the platform owner reinstate a banned organization after confirming its data is preserved', async () => {
+  const organization = {
+    id: 'org-banned',
+    name: 'Banned Organization',
+    slug: 'banned-organization',
+    status: 'banned',
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+    owner_first_name: 'Owner',
+    owner_last_name: 'One',
+    owner_email: 'owner@example.test',
+    member_count: 1,
+    property_count: 2,
+    unread_message_count: 0,
+  }
+  const request = vi.fn(async (method: string, path: string, body?: { action: string }) => {
+    if (path === 'api/v1/platform/organizations') return { content: [organization], total: 1, page: 0, size: 20 }
+    if (path === 'api/v1/platform/summary') return { total_organizations: 1, active_organizations: 0, pending_organizations: 0, restricted_organizations: 1, unread_messages: 0 }
+    if (path === 'api/v1/platform/organizations/org-banned') return organization
+    if (path.endsWith('/audit')) return []
+    if (path.endsWith('/messages')) return []
+    if (path.endsWith('/decisions') && method === 'post') return { status: body?.action === 'reinstate' ? 'active' : 'banned' }
+    return undefined
+  })
+  const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+  const service = { request, signOut: vi.fn() } as unknown as AuthLifecycleService
+  render(
+    <AuthContext.Provider value={{ state: { status: 'authenticated', session: { user: { id: 'platform', email: 'owner@example.test', firstName: 'Alex', lastName: 'Morgan' }, organizations: [] } }, service }}>
+      <MemoryRouter><PlatformPage /></MemoryRouter>
+    </AuthContext.Provider>,
+  )
+
+  const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: 'Banned Organization' }))
+  const details = screen.getByRole('complementary', { name: 'Organization details and support' })
+  expect(within(details).getByText(/existing properties, units, memberships, and records are retained/i)).toBeVisible()
+  await user.click(within(details).getByRole('button', { name: 'reinstate' }))
+
+  expect(confirm).toHaveBeenCalledWith(expect.stringContaining('Existing organization data will be preserved.'))
+  expect(request).toHaveBeenCalledWith('post', 'api/v1/platform/organizations/org-banned/decisions', { action: 'reinstate', reason: '' })
+  expect(await screen.findByRole('status')).toHaveTextContent('Organization status updated.')
+  confirm.mockRestore()
+})
+
 it('refreshes the selected support thread automatically while the page is visible', async () => {
   vi.useFakeTimers()
   vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible')

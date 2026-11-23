@@ -20,6 +20,7 @@ import { ConfirmationDialog } from '@/components/ui/confirmation-dialog'
 import { Card } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
+import { OrganizationImage } from '@/components/OrganizationImage'
 
 type Mode = 'list' | 'create' | 'details' | 'edit'
 export function UnitsPage({ mode = 'list' }: { mode?: Mode }) {
@@ -323,6 +324,11 @@ function UnitWorkspace({
                     {list.data.content.map((unit) => (
                       <li key={unit.id} className="min-w-0">
                         <Card className="h-full gap-4 rounded-2xl p-4 transition hover:border-primary/25 hover:shadow-sm motion-reduce:transition-none sm:p-5">
+                          <OrganizationImage
+                            resourceType="unit"
+                            resourceId={unit.id}
+                            alt={`Unit ${unit.unitNumber}`}
+                          />
                           <div className="flex items-start justify-between gap-3">
                             <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/5 text-primary">
                               <DoorOpen aria-hidden="true" className="size-5" />
@@ -381,6 +387,12 @@ function UnitWorkspace({
           )}
           {mode === 'details' && detail.data && !detail.isError && (
             <section className="space-y-5">
+              <OrganizationImage
+                resourceType="unit"
+                resourceId={detail.data.id}
+                alt={`Unit ${detail.data.unitNumber}`}
+                canManage={writable}
+              />
               <Card className="gap-5 rounded-2xl p-5 sm:p-7">
                 <div className="flex flex-wrap items-start justify-between gap-4 border-b pb-5">
                   <div className="flex items-start gap-3">

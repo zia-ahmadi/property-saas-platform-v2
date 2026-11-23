@@ -1,0 +1,70 @@
+openapi: 3.1.0
+info:
+  title: Organization Image API
+  version: 1.0.0
+  description: >
+    One identifying JPEG or PNG image can be stored for each property, unit,
+    or renter. Images are stored in PostgreSQL and are accessible only to active
+    members of the owning organization. Upload and removal require property
+    management permission.
+servers:
+  - url: /
+security:
+  - bearerAuth: []
+paths:
+  /api/v1/organizations/{organizationId}/images/{resourceType}/{resourceId}:
+    parameters:
+      - name: organizationId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+      - name: resourceType
+        in: path
+        required: true
+        schema: { type: string, enum: [property, unit, renter] }
+      - name: resourceId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: getOrganizationImage
+      summary: Read an entity's identifying image
+      responses:
+        '200':
+          description: JPEG or PNG image
+          content:
+            image/jpeg: { schema: { type: string, format: binary } }
+            image/png: { schema: { type: string, format: binary } }
+        '204': { description: The entity has no image }
+        '403': { description: Active organization membership required }
+        '404': { description: Entity does not belong to this organization }
+    put:
+      operationId: putOrganizationImage
+      summary: Upload or replace an identifying image
+      description: Maximum 5 MB and 10 megapixels. The file's actual format is validated; the declared content type is not trusted.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        '204': { description: Image saved }
+        '400': { description: Invalid or unsupported image }
+        '403': { description: Property management permission required }
+        '404': { description: Entity does not belong to this organization }
+        '409': { description: Archived entities cannot have their image changed }
+        '413': { description: Image exceeds the maximum size }
+    delete:
+      operationId: deleteOrganizationImage
+      summary: Remove an identifying image
+      responses:
+        '204': { description: Image removed if present }
+        '403': { description: Property management permission required }
+        '404': { description: Entity does not belong to this organization }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }

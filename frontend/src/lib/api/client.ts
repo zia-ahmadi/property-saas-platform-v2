@@ -4,6 +4,7 @@ import { ApiError } from './errors'
 export interface RequestOptions extends Omit<RequestInit, 'body' | 'signal'> {
   params?: Record<string, string | number | boolean | undefined>
   body?: unknown
+  responseType?: 'blob'
   timeoutMs?: number
   signal?: AbortSignal
 }
@@ -67,6 +68,7 @@ const request = async <T>(endpoint: string, options: RequestOptions = {}): Promi
   const {
     params,
     body,
+    responseType,
     timeoutMs = 30_000,
     headers: customHeaders,
     signal: callerSignal,
@@ -93,10 +95,14 @@ const request = async <T>(endpoint: string, options: RequestOptions = {}): Promi
 
   let serializedBody: BodyInit | undefined = undefined
   if (body !== undefined && body !== null) {
-    if (!headers.has('Content-Type')) {
-      headers.set('Content-Type', 'application/json')
+    if (typeof FormData !== 'undefined' && body instanceof FormData) {
+      serializedBody = body
+    } else {
+      if (!headers.has('Content-Type')) {
+        headers.set('Content-Type', 'application/json')
+      }
+      serializedBody = JSON.stringify(body)
     }
-    serializedBody = JSON.stringify(body)
   }
 
   const controller = new AbortController()
@@ -137,6 +143,10 @@ const request = async <T>(endpoint: string, options: RequestOptions = {}): Promi
 
     if (response.status === 204 || response.status === 205) {
       return undefined as T
+    }
+
+    if (responseType === 'blob') {
+      return (await response.blob()) as T
     }
 
     const text = await response.text()

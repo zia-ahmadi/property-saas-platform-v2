@@ -23,7 +23,7 @@ describe('property workflows', () => {
     mocks.request.mockImplementation(async (_method, _path, _body, options) => ({ content: [property], page: options.params.page, size: 10, totalElements: 11, totalPages: 2, first: options.params.page === 0, last: options.params.page === 1 }))
     show(); expect(await screen.findByRole('link', { name: 'Property One' })).toBeInTheDocument(); expect(screen.getByText('Showing 1–10 of 11 properties')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Next page' })); await waitFor(() => expect(screen.getByText('Showing 11–11 of 11 properties')).toBeInTheDocument())
-    expect(mocks.request).toHaveBeenLastCalledWith('get', 'properties', undefined, expect.objectContaining({ params: { page: 1, size: 10 } }))
+    expect(mocks.request).toHaveBeenCalledWith('get', 'properties', undefined, expect.objectContaining({ params: { page: 1, size: 10 } }))
   })
   it('creates a property with validated backend fields', async () => {
     const invalidation = vi.spyOn(QueryClient.prototype, 'invalidateQueries')

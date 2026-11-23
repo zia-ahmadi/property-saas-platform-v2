@@ -43,6 +43,24 @@ class PlatformAdministrationIntegrationTest {
         mvc.perform(get("/api/v1/organizations/{id}/inbox",org).with(ownerJwt)).andExpect(status().isOk()).andExpect(jsonPath("$[0].body").value("private"));
         mvc.perform(get("/api/v1/organizations/{id}/inbox",other).with(ownerJwt)).andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
     }
+    @Test void bannedOrganizationCanBeReinstatedWithoutRemovingTenantData() throws Exception {
+        UUID owner=UUID.randomUUID(), platform=UUID.randomUUID(), org=UUID.randomUUID();
+        for (UUID u : new UUID[]{owner,platform}) db.update("insert into users(id,email,password_hash,first_name,last_name) values (?,?, 'hash','Test','User')",u,u+"@example.test");
+        db.update("insert into organizations(id,name,slug,status) values (?, 'Retained organization',?,'banned')",org,org.toString());
+        db.update("insert into organization_memberships(id,organization_id,user_id,role) values (?,?,?,'owner')",UUID.randomUUID(),org,owner);
+        db.update("insert into properties(organization_id,name,property_type,address_line1,city,country_code) values (?,'Retained property','apartment','1 Main St','Test City','US')",org);
+        db.update("insert into platform_authorities(user_id,authority) values (?,'PLATFORM_OWNER')",platform);
+        var platformJwt=SecurityMockMvcRequestPostProcessors.jwt().jwt(j -> j.subject(platform.toString()));
+
+        mvc.perform(post("/api/v1/platform/organizations/{id}/decisions",org).with(platformJwt).contentType("application/json").content("{\"action\":\"reinstate\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("active"));
+
+        assertEquals("active", db.queryForObject("select status from organizations where id=?",String.class,org));
+        assertEquals(1, db.queryForObject("select count(*) from organization_memberships where organization_id=?",Integer.class,org));
+        assertEquals(1, db.queryForObject("select count(*) from properties where organization_id=?",Integer.class,org));
+        assertEquals("banned", db.queryForObject("select previous_status from organization_status_audit where organization_id=? order by created_at desc limit 1",String.class,org));
+        assertEquals("active", db.queryForObject("select new_status from organization_status_audit where organization_id=? order by created_at desc limit 1",String.class,org));
+    }
     @Test void platformDirectoryIncludesOrganizationContextAndSummaryCounts() throws Exception {
         UUID owner=UUID.randomUUID(), member=UUID.randomUUID(), platform=UUID.randomUUID(), org=UUID.randomUUID();
         for (UUID u : new UUID[]{owner,member,platform}) db.update("insert into users(id,email,password_hash,first_name,last_name) values (?,?, 'hash',?,?)",u,u+"@example.test",u.equals(owner)?"Owner":"Test",u.equals(owner)?"Person":"User");

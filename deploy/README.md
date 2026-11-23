@@ -112,6 +112,10 @@ Startup order is health-gated: `postgres` must pass `pg_isready`, then
 ready), then `frontend` starts. Because the backend waits for a healthy
 database, Flyway migrations run exactly once on the first start.
 
+Property, unit, and renter identifying images are stored in PostgreSQL (JPEG or
+PNG, up to 5 MB and 10 megapixels each). They are included in PostgreSQL backups
+and persist with the database volume.
+
 ## 6. Local Vite development (no Docker)
 
 ```sh

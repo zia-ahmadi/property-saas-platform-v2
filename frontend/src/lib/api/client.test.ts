@@ -64,6 +64,22 @@ describe('apiClient', () => {
     expect(headers.get('X-Request-ID')).toBe('test')
   })
 
+  it('sends multipart form data without overriding its generated content type', async () => {
+    fetchMock.mockResolvedValue(new Response(null, { status: 204 }))
+    const form = new FormData()
+    form.set('file', new Blob(['image bytes'], { type: 'image/png' }), 'image.png')
+    await apiClient.put('images/property/one', form)
+    const options = fetchMock.mock.calls[0][1]
+    expect(options?.body).toBe(form)
+    expect(new Headers(options?.headers).has('Content-Type')).toBe(false)
+  })
+
+  it('returns an image response as a blob when requested', async () => {
+    const blob = new Blob(['image bytes'], { type: 'image/png' })
+    fetchMock.mockResolvedValue(new Response(blob, { headers: { 'Content-Type': 'image/png' } }))
+    await expect(apiClient.get('images/property/one', { responseType: 'blob' })).resolves.toEqual(blob)
+  })
+
   it.each([204, 205])('returns undefined for HTTP %s', async (status) => {
     fetchMock.mockResolvedValue(new Response(null, { status }))
     await expect(apiClient.get('properties')).resolves.toBeUndefined()

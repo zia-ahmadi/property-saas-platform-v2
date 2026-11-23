@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { PageHeader } from '@/components/ui/page-header'
 import { useOrganization } from '@/features/organization/context'
 import { renterError, type Renter, type RenterInput } from '@/features/renters/api'
+import { OrganizationImage } from '@/components/OrganizationImage'
 
 type Mode = 'details' | 'create' | 'edit'
 
@@ -84,6 +85,14 @@ function RenterProfile({ mode, renterId }: { mode: Mode; renterId: string }) {
       )}
       {mode === 'details' && renter && (
         <section className="space-y-4 rounded-xl border bg-card p-6 break-words">
+          <OrganizationImage
+            resourceType="renter"
+            resourceId={renter.id}
+            alt={`${renter.firstName} ${renter.lastName}`}
+            canManage={org.can('PROPERTY_MANAGE')}
+            editable={!renter.archivedAt}
+            className="max-w-md"
+          />
           <h3 className="text-xl font-semibold">
             {renter.firstName} {renter.lastName}
           </h3>

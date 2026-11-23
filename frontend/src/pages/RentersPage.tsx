@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/ui/page-header'
 import { Pagination } from '@/components/ui/pagination'
 import { useOrganization } from '@/features/organization/context'
 import { renterError, type RenterPage } from '@/features/renters/api'
+import { OrganizationImage } from '@/components/OrganizationImage'
 
 export function RentersPage() {
   const org = useOrganization()
@@ -92,6 +93,12 @@ function RenterList() {
             <ul className="space-y-3">
               {query.data.content.map((renter) => (
                 <li key={renter.id} className="rounded-xl border bg-card p-5 break-words">
+                  <OrganizationImage
+                    resourceType="renter"
+                    resourceId={renter.id}
+                    alt={`${renter.firstName} ${renter.lastName}`}
+                    className="mb-4 max-w-sm"
+                  />
                   <h3>
                     <Link className="font-semibold underline" to={`/renters/${renter.id}`}>
                       {renter.firstName} {renter.lastName}

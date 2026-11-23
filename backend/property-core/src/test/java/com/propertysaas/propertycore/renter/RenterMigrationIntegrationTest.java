@@ -39,7 +39,7 @@ class RenterMigrationIntegrationTest {
             assertEquals(org, jdbc.queryForObject("select organization_id from " + schema + ".renters where id = ?",
                     UUID.class, renter));
             Flyway latest = Flyway.configure().dataSource(dataSource).schemas(schema).cleanDisabled(false).load();
-            assertEquals(3, latest.migrate().migrationsExecuted);
+            assertEquals(4, latest.migrate().migrationsExecuted);
             assertEquals("active", jdbc.queryForObject("select status from " + schema + ".organizations where id = ?", String.class, org));
         } finally {
             after.clean();

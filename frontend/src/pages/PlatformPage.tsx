@@ -67,7 +67,7 @@ const choices: Record<OrganizationStatus, string[]> = {
   active: ['suspend', 'ban'],
   suspended: ['reinstate', 'ban'],
   rejected: [],
-  banned: [],
+  banned: ['reinstate'],
 }
 
 function formatDate(value: string) {
@@ -221,7 +221,8 @@ export function PlatformPage() {
       setNotice('Enter a reason for this decision.')
       return
     }
-    if (['suspend', 'ban'].includes(action) && !window.confirm(`${action} ${selected.name}?`)) return
+    const confirmationRequired = ['suspend', 'ban'].includes(action) || (action === 'reinstate' && selected.status === 'banned')
+    if (confirmationRequired && !window.confirm(`${action} ${selected.name}?${action === 'reinstate' ? ' Existing organization data will be preserved.' : ''}`)) return
     const organizationId = selected.id
     const selection = selectionSequence.current
     try {
@@ -448,6 +449,9 @@ export function PlatformPage() {
                     <div>
                       <h4 className="font-semibold">Workspace status</h4>
                       <p className="text-xs text-muted-foreground">Status changes are recorded for review.</p>
+                      {selected.status === 'suspended' || selected.status === 'banned'
+                        ? <p className="mt-1 text-xs text-muted-foreground">Reactivation restores organization access; existing properties, units, memberships, and records are retained.</p>
+                        : null}
                     </div>
                     <label className="block text-sm font-medium">Reason for reject, suspend, or ban
                       <textarea aria-label="Reason for adverse decisions" maxLength={2000} rows={2} value={reason} onChange={event => setReason(event.target.value)} placeholder="Add context for the organization status change…" className="mt-1.5 w-full rounded-lg border bg-background p-2.5 text-sm font-normal outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" />

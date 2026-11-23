@@ -110,7 +110,7 @@ public class PlatformAdministrationController {
             case "approve" -> old.equals("pending") ? "active" : null;
             case "reject" -> old.equals("pending") ? "rejected" : null;
             case "suspend" -> old.equals("active") ? "suspended" : null;
-            case "reinstate" -> old.equals("suspended") ? "active" : null;
+            case "reinstate" -> Set.of("suspended", "banned").contains(old) ? "active" : null;
             case "ban" -> Set.of("pending", "active", "suspended").contains(old) ? "banned" : null;
             default -> throw new IllegalArgumentException("Unknown decision");
         };
