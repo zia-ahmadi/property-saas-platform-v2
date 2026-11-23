@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
+import { ArrowRight, DoorOpen, Plus, RefreshCw } from 'lucide-react'
 import { useOrganization } from '@/features/organization/context'
 import type { Property } from '@/features/properties/api'
 import {
@@ -13,9 +14,12 @@ import {
 import { unitError } from '@/features/units/errors'
 import { UnitForm } from '@/features/units/UnitForm'
 import { UnitStatus } from '@/features/units/UnitStatus'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Pagination } from '@/components/ui/pagination'
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog'
+import { Card } from '@/components/ui/card'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Skeleton } from '@/components/ui/skeleton'
 
 type Mode = 'list' | 'create' | 'details' | 'edit'
 export function UnitsPage({ mode = 'list' }: { mode?: Mode }) {
@@ -147,166 +151,322 @@ function UnitWorkspace({
   }
   const target = detail.data && manualTarget(detail.data.availabilityStatus)
   const error = property.error || (mode === 'list' ? list.error : detail.error)
+  const isList = mode === 'list'
+  const isForm = mode === 'create' || mode === 'edit'
+  const units = list.data?.content ?? []
+  const availableOnPage = units.filter((unit) => unit.availabilityStatus === 'AVAILABLE').length
+  const occupiedOnPage = units.filter((unit) => unit.availabilityStatus === 'OCCUPIED').length
+  const title =
+    mode === 'create'
+      ? 'Create unit'
+      : mode === 'edit'
+        ? 'Edit unit'
+        : mode === 'details'
+          ? 'Unit details'
+          : 'Units'
   return (
-    <div className="space-y-5">
-      <Link className="underline" to={`/properties/${propertyId}`}>
-        Back to property
-      </Link>
-      {mode !== 'list' && (
-        <Link className="ml-4 underline" to={route}>
-          Back to units
-        </Link>
-      )}
-      <h2 className="text-2xl font-bold">
-        {mode === 'create'
-          ? 'Create unit'
-          : mode === 'edit'
-            ? 'Edit unit'
-            : mode === 'details'
-              ? 'Unit details'
-              : 'Units'}
-      </h2>
-      <Button
-        variant="outline"
-        disabled={property.isFetching || list.isFetching || detail.isFetching || mutation.isPending}
-        onClick={refresh}
-      >
-        Refresh
-      </Button>
+    <div className="mx-auto w-full max-w-[1200px] min-w-0 space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <Link className={buttonVariants({ variant: 'outline' })} to={`/properties/${propertyId}`}>
+            Back to property
+          </Link>
+          {!isList && (
+            <Link className={buttonVariants({ variant: 'outline' })} to={route}>
+              Back to units
+            </Link>
+          )}
+        </div>
+        <Button
+          variant="outline"
+          disabled={
+            property.isFetching || list.isFetching || detail.isFetching || mutation.isPending
+          }
+          onClick={refresh}
+        >
+          <RefreshCw aria-hidden="true" className="size-4" />
+          {property.isFetching || list.isFetching || detail.isFetching ? 'Refreshing…' : 'Refresh'}
+        </Button>
+      </div>
+
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          Portfolio / Property / Units
+        </p>
+        <div className="mt-1 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">{title}</h2>
+            {property.data && (
+              <p className="mt-1 text-sm text-muted-foreground">
+                {property.data.name} · {property.data.status === 'ACTIVE' ? 'Active property' : 'Archived property'}
+              </p>
+            )}
+          </div>
+          {isList && writable && (
+            <Link className={buttonVariants()} to={`${route}/new`}>
+              <Plus aria-hidden="true" className="size-4" />
+              Create unit
+            </Link>
+          )}
+        </div>
+      </div>
+
       {(feedback || (location.state as { saved?: boolean } | null)?.saved) && (
-        <p role="status">{feedback || 'Unit saved successfully.'}</p>
+        <p
+          role="status"
+          className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-800 dark:text-emerald-200"
+        >
+          {feedback || 'Unit saved successfully.'}
+        </p>
       )}
-      {property.isPending && <p role="status">Loading property…</p>}
-      {error && <p role="alert">{unitError(error)}</p>}
+      {property.isPending && (
+        <p role="status" className="rounded-xl border bg-card p-5 text-muted-foreground">
+          Loading property…
+        </p>
+      )}
+      {error && (
+        <p role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
+          {unitError(error)}
+        </p>
+      )}
       {property.data && !property.isError && (
         <>
-          <p>
-            Property:{' '}
-            <Link className="underline" to={`/properties/${propertyId}`}>
-              {property.data.name}
-            </Link>{' '}
-            · {property.data.status}
-          </p>
           {property.data.status === 'ARCHIVED' && (
-            <p role="status">
+            <p
+              role="status"
+              className="rounded-xl border border-amber-500/25 bg-amber-500/5 p-4 text-sm"
+            >
               This property is archived. Units remain readable; creation, editing and availability
               changes are unavailable.
             </p>
           )}
           {!org.can('PROPERTY_MANAGE') && (
-            <p>Read-only access. Managing units requires property management permission.</p>
+            <p className="rounded-xl border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+              Read-only access. Managing units requires property management permission.
+            </p>
           )}
-          {mode === 'list' && (
-            <>
-              {writable && (
-                <Link className="underline" to={`${route}/new`}>
-                  Create unit
-                </Link>
-              )}
-              <label className="block">
-                Page size{' '}
-                <select
-                  value={size}
-                  onChange={(e) => {
-                    setPage(0)
-                    setSize(Number(e.target.value))
-                  }}
-                  className="rounded border bg-background p-2"
-                >
-                  {[10, 25, 50, 100].map((n) => (
-                    <option key={n}>{n}</option>
+
+          {isList && (
+            <section aria-label="Property units" className="space-y-5">
+              {list.data && (
+                <dl className="grid gap-3 sm:grid-cols-3">
+                  {[
+                    ['Units in this property', list.data.totalElements],
+                    ['Available on this page', availableOnPage],
+                    ['Occupied on this page', occupiedOnPage],
+                  ].map(([label, count]) => (
+                    <Card key={label} className="gap-2 border-border/70 p-4 sm:p-5">
+                      <dt className="text-sm text-muted-foreground">{label}</dt>
+                      <dd className="text-3xl font-semibold tracking-tight tabular-nums">
+                        {count}
+                      </dd>
+                    </Card>
                   ))}
-                </select>
-              </label>
-              {list.isPending && <p role="status">Loading units…</p>}
-              {list.data && !list.isError && (
-                <>
-                  {list.data.content.length ? (
-                    <ul className="space-y-3">
-                      {list.data.content.map((unit) => (
-                        <li key={unit.id} className="space-y-2 rounded border p-4">
-                          <Link className="font-semibold underline" to={`${route}/${unit.id}`}>
-                            {unit.unitNumber}
-                          </Link>
-                          <p>
-                            {unit.unitType} · Floor: {unit.floorNumber ?? 'Not specified'} · Area:{' '}
-                            {unit.areaSqm == null ? 'Not specified' : `${unit.areaSqm} m²`}
-                          </p>
-                          <UnitStatus status={unit.availabilityStatus} />
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p>No units found for this property.</p>
-                  )}
-                  <p>
-                    Page {list.data.page + 1} of {Math.max(1, list.data.totalPages)} ·{' '}
-                    {list.data.totalElements} units
-                  </p>
-                  <Pagination
-                    page={page + 1}
-                    totalPages={list.data.totalPages}
-                    onPageChange={(n) => setPage(n - 1)}
-                  />
-                </>
+                </dl>
               )}
-            </>
-          )}
-          {(mode === 'details' || mode === 'edit') && detail.isPending && (
-            <p role="status">Loading unit…</p>
-          )}
-          {mode === 'details' && detail.data && !detail.isError && (
-            <section className="space-y-3 rounded border p-5">
-              <h3 className="text-xl font-semibold">{detail.data.unitNumber}</h3>
-              <p>Unit ID: {detail.data.id}</p>
-              <p>Type: {detail.data.unitType}</p>
-              <p>Floor: {detail.data.floorNumber ?? 'Not specified'}</p>
-              <p>
-                Area: {detail.data.areaSqm == null ? 'Not specified' : `${detail.data.areaSqm} m²`}
-              </p>
-              <UnitStatus status={detail.data.availabilityStatus} />
-              <p>Created: {detail.data.createdAt}</p>
-              <p>Updated: {detail.data.updatedAt}</p>
-              <p>
-                Occupancy is controlled through lease management. Manual changes to or from OCCUPIED
-                are unavailable.
-              </p>
-              {writable && (
-                <div className="flex gap-4">
-                  <Link className="underline" to={`${route}/${unitId}/edit`}>
-                    Edit unit
-                  </Link>
-                  {target && (
-                    <ConfirmationDialog
-                      trigger={<Button disabled={mutation.isPending}>Mark {target}</Button>}
-                      open={open}
-                      onOpenChange={setOpen}
-                      title={`Mark unit ${target}?`}
-                      description="This changes whether the unit is available. The server will verify the current state."
-                      confirmLabel="Change availability"
-                      loading={mutation.isPending}
-                      onConfirm={() => {
-                        if (!mutation.isPending) mutation.mutate({ status: target })
-                      }}
-                    />
-                  )}
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-semibold">Unit directory</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Availability counts reflect the units on the current page.
+                  </p>
                 </div>
+                <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                  Page size
+                  <select
+                    aria-label="Page size"
+                    value={size}
+                    onChange={(event) => {
+                      setPage(0)
+                      setSize(Number(event.target.value))
+                    }}
+                    className="min-h-10 rounded-lg border bg-card px-3 text-foreground"
+                  >
+                    {[10, 25, 50, 100].map((value) => (
+                      <option key={value} value={value}>
+                        {value}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              {list.isPending && (
+                <div role="status" aria-label="Loading units" className="grid gap-3 sm:grid-cols-2">
+                  <span className="sr-only">Loading units…</span>
+                  {Array.from({ length: 4 }, (_, index) => (
+                    <Skeleton key={index} className="h-36 rounded-2xl" />
+                  ))}
+                </div>
+              )}
+              {list.data && !list.isError && list.data.content.length === 0 && (
+                <EmptyState
+                  icon={<DoorOpen className="size-5" />}
+                  title="No units yet"
+                  description={
+                    writable
+                      ? 'Create the first unit for this property to start tracking its availability.'
+                      : 'No units have been added to this property yet.'
+                  }
+                  action={
+                    writable ? (
+                      <Link className={buttonVariants()} to={`${route}/new`}>
+                        <Plus aria-hidden="true" className="size-4" />
+                        Create first unit
+                      </Link>
+                    ) : undefined
+                  }
+                />
+              )}
+              {list.data && list.data.content.length > 0 && (
+                <>
+                  <ul aria-label="Units" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {list.data.content.map((unit) => (
+                      <li key={unit.id} className="min-w-0">
+                        <Card className="h-full gap-4 rounded-2xl p-4 transition hover:border-primary/25 hover:shadow-sm motion-reduce:transition-none sm:p-5">
+                          <div className="flex items-start justify-between gap-3">
+                            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/5 text-primary">
+                              <DoorOpen aria-hidden="true" className="size-5" />
+                            </span>
+                            <UnitStatus status={unit.availabilityStatus} />
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="wrap-anywhere text-lg font-semibold">
+                              <Link
+                                className="rounded-sm outline-offset-4 hover:text-primary focus-visible:text-primary"
+                                to={`${route}/${unit.id}`}
+                              >
+                                {unit.unitNumber}
+                              </Link>
+                            </h4>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              {unit.unitType.replaceAll('_', ' ')}
+                            </p>
+                          </div>
+                          <div className="mt-auto flex flex-wrap gap-x-4 gap-y-1 border-t pt-3 text-xs text-muted-foreground">
+                            <span>Floor {unit.floorNumber ?? '—'}</span>
+                            <span>{unit.areaSqm == null ? 'Area not specified' : `${unit.areaSqm} m²`}</span>
+                          </div>
+                          <Link
+                            className="inline-flex min-h-9 items-center gap-1 text-sm font-medium text-primary"
+                            to={`${route}/${unit.id}`}
+                            aria-label={`View unit ${unit.unitNumber}`}
+                          >
+                            View details <ArrowRight aria-hidden="true" className="size-4" />
+                          </Link>
+                        </Card>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+                    <p className="text-sm text-muted-foreground">
+                      Page {list.data.page + 1} of {Math.max(1, list.data.totalPages)} ·{' '}
+                      {list.data.totalElements}{' '}
+                      {list.data.totalElements === 1 ? 'unit' : 'units'}
+                    </p>
+                    <Pagination
+                      page={page + 1}
+                      totalPages={list.data.totalPages}
+                      onPageChange={(nextPage) => setPage(nextPage - 1)}
+                    />
+                  </div>
+                </>
               )}
             </section>
           )}
-          {(mode === 'create' || mode === 'edit') &&
+
+          {(mode === 'details' || mode === 'edit') && detail.isPending && (
+            <p role="status" className="rounded-xl border bg-card p-5 text-muted-foreground">
+              Loading unit…
+            </p>
+          )}
+          {mode === 'details' && detail.data && !detail.isError && (
+            <section className="space-y-5">
+              <Card className="gap-5 rounded-2xl p-5 sm:p-7">
+                <div className="flex flex-wrap items-start justify-between gap-4 border-b pb-5">
+                  <div className="flex items-start gap-3">
+                    <span className="flex size-12 items-center justify-center rounded-xl bg-primary/5 text-primary">
+                      <DoorOpen aria-hidden="true" className="size-6" />
+                    </span>
+                    <div>
+                      <h3 className="text-xl font-semibold">{detail.data.unitNumber}</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {detail.data.unitType.replaceAll('_', ' ')}
+                      </p>
+                    </div>
+                  </div>
+                  <UnitStatus status={detail.data.availabilityStatus} />
+                </div>
+                <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  {[
+                    ['Unit ID', detail.data.id],
+                    ['Type', detail.data.unitType.replaceAll('_', ' ')],
+                    ['Floor', detail.data.floorNumber ?? 'Not specified'],
+                    ['Area', detail.data.areaSqm == null ? 'Not specified' : `${detail.data.areaSqm} m²`],
+                  ].map(([label, value]) => (
+                    <div key={label} className="min-w-0">
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        {label}
+                      </dt>
+                      <dd className="mt-1 wrap-anywhere font-medium">{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+                <div className="rounded-xl bg-muted/50 p-4 text-sm text-muted-foreground">
+                  Occupancy is controlled through lease management. Manual changes to or from
+                  OCCUPIED are unavailable.
+                </div>
+                {writable && (
+                  <div className="flex flex-wrap gap-2">
+                    <Link
+                      className={buttonVariants({ variant: 'outline' })}
+                      to={`${route}/${unitId}/edit`}
+                    >
+                      Edit unit
+                    </Link>
+                    {target && (
+                      <ConfirmationDialog
+                        trigger={<Button disabled={mutation.isPending}>Mark {target}</Button>}
+                        open={open}
+                        onOpenChange={setOpen}
+                        title={`Mark unit ${target}?`}
+                        description="This changes whether the unit is available. The server will verify the current state."
+                        confirmLabel="Change availability"
+                        loading={mutation.isPending}
+                        onConfirm={() => {
+                          if (!mutation.isPending) mutation.mutate({ status: target })
+                        }}
+                      />
+                    )}
+                  </div>
+                )}
+              </Card>
+              {mutation.isError && (
+                <p role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
+                  {unitError(mutation.error)}
+                </p>
+              )}
+            </section>
+          )}
+          {isForm &&
             writable &&
             (mode === 'create' || (detail.data && !detail.isError)) && (
-              <UnitForm
-                initial={mode === 'create' ? emptyUnit : detail.data!}
-                saving={mutation.isPending}
-                error={mutation.isError ? unitError(mutation.error) : undefined}
-                onSave={(input) => mutation.mutateAsync({ input }).catch(() => undefined)}
-              />
+              <Card className="max-w-2xl rounded-2xl p-5 sm:p-7">
+                <div className="mb-5">
+                  <h3 className="text-lg font-semibold">
+                    {mode === 'create' ? 'Unit information' : 'Update unit details'}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Set the unit number, type, floor, and optional area.
+                  </p>
+                </div>
+                <UnitForm
+                  initial={mode === 'create' ? emptyUnit : detail.data!}
+                  saving={mutation.isPending}
+                  error={mutation.isError ? unitError(mutation.error) : undefined}
+                  onSave={(input) => mutation.mutateAsync({ input }).catch(() => undefined)}
+                />
+              </Card>
             )}
-          {mutation.isError && (mode === 'details' || !writable) && (
-            <p role="alert">{unitError(mutation.error)}</p>
-          )}
         </>
       )}
     </div>

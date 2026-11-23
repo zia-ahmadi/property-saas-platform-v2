@@ -14,17 +14,29 @@ export function AppHeader() {
   const platformAccess = usePlatformAccess()
   const platformWorkspace = pathname === '/platform' || pathname.startsWith('/platform/')
   const [warning, setWarning] = useState(false)
-  const title = platformWorkspace ? 'Platform workspace' : matchPath('/renters/*', pathname)
-    ? 'Renters'
-    : matchPath('/properties/:propertyId/units/*', pathname)
-      ? 'Units'
-      : matchPath('/properties/:propertyId', pathname)
-        ? 'Property Details'
-        : matchPath('/properties', pathname)
-          ? 'Properties'
-          : matchPath('/settings', pathname)
-            ? 'Settings'
-            : 'Dashboard'
+  const title = platformWorkspace
+    ? 'Platform workspace'
+    : matchPath('/renters/*', pathname)
+      ? 'Renters'
+      : matchPath('/properties/:propertyId/units/*', pathname)
+        ? 'Units'
+        : matchPath('/properties/:propertyId/edit', pathname)
+          ? 'Edit property'
+          : matchPath('/properties/:propertyId', pathname)
+            ? 'Property Details'
+            : matchPath('/properties/new', pathname)
+              ? 'Add property'
+              : matchPath('/properties', pathname)
+                ? 'Properties'
+                : matchPath('/team', pathname)
+                  ? 'Team'
+                  : matchPath('/inbox', pathname) || matchPath('/organization-messages/:organizationId', pathname)
+                    ? 'Inbox'
+                    : matchPath('/access', pathname)
+                      ? 'Organization access'
+                      : matchPath('/settings', pathname)
+                        ? 'Settings'
+                        : 'Dashboard'
 
   return (
     <header className="flex min-h-16 min-w-0 flex-wrap items-center justify-between gap-4 border-b bg-card px-4 py-3 text-card-foreground sm:px-6 lg:px-8">

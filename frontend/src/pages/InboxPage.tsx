@@ -1,8 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router'
+import { MessageCircle, RefreshCw, Send, ShieldCheck } from 'lucide-react'
 import { useAuth } from '@/features/auth/context'
 import { useOrganization } from '@/features/organization/context'
 import { ApiError } from '@/lib/api/errors'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Textarea } from '@/components/ui/textarea'
 
 type Message = {
   id: string
@@ -37,6 +42,8 @@ function InboxContent({ id }: { id: string }) {
   const [error, setError] = useState('')
   const [body, setBody] = useState('')
   const [sending, setSending] = useState(false)
+  const [loaded, setLoaded] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
   const requestSequence = useRef(0)
   const path = `api/v1/my-organizations/${id}/messages`
 
@@ -50,15 +57,21 @@ function InboxContent({ id }: { id: string }) {
       }
     } catch (requestError) {
       if (current === requestSequence.current) setError(messageError(requestError, 'load messages'))
+    } finally {
+      if (current === requestSequence.current) setLoaded(true)
     }
   }, [path, service])
 
   useEffect(() => {
     let active = true
+    let initialLoad = true
     let timer: number
     const poll = async () => {
       if (!active) return
-      if (document.visibilityState === 'visible') await load()
+      if (initialLoad || document.visibilityState === 'visible') {
+        initialLoad = false
+        await load()
+      }
       if (active) timer = window.setTimeout(() => void poll(), 3_000)
     }
     void poll()
@@ -78,6 +91,12 @@ function InboxContent({ id }: { id: string }) {
     }
   }
 
+  const refresh = async () => {
+    setRefreshing(true)
+    await load()
+    setRefreshing(false)
+  }
+
   const send = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!body.trim() || sending) return
@@ -95,24 +114,188 @@ function InboxContent({ id }: { id: string }) {
   }
 
   return (
-    <section className="space-y-4">
-      <h2 className="text-2xl font-bold">Inbox</h2>
-      <p>Messages with the platform team remain available if your organization is restricted. New messages refresh automatically while this page is open.</p>
-      {error && <p role="alert">{error}</p>}
-      {messages.length === 0 && !error && <p>No messages yet.</p>}
-      <div aria-live="polite" className="space-y-3">
-        {messages.map(item => (
-          <article key={item.id} className="space-y-2 rounded border p-4">
-            <p>{item.direction === 'platform_to_organization' ? `Platform · ${item.read_at ? 'Read' : 'Unread'}` : `Your organization · ${item.platform_read_at ? 'Read by platform' : 'Unread by platform'}`} · {new Date(item.created_at).toLocaleString()}</p>
-            <p className="whitespace-pre-wrap">{item.body}</p>
-            {item.direction === 'platform_to_organization' && !item.read_at && <button className="rounded border p-2" onClick={() => void markRead(item.id)}>Mark read</button>}
-          </article>
-        ))}
+    <div className="mx-auto w-full max-w-5xl min-w-0 space-y-6">
+      <section className="relative isolate overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 px-5 py-7 text-white shadow-lg sm:px-8 sm:py-9">
+        <div
+          aria-hidden="true"
+          className="absolute -right-10 -top-20 -z-10 size-64 rounded-full bg-indigo-400/20 blur-3xl"
+        />
+        <div className="flex flex-wrap items-end justify-between gap-5">
+          <div className="max-w-2xl space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-200">
+              Organization support
+            </p>
+            <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">Inbox</h2>
+            <p className="text-sm leading-6 text-slate-300 sm:text-base">
+              A private conversation with the platform team. Replies appear automatically while
+              this page is open.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1.5 text-sm text-emerald-100">
+            <span aria-hidden="true" className="size-2 rounded-full bg-emerald-300" />
+            Live updates · 3 sec
+          </div>
+        </div>
+      </section>
+
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
+        <Card className="min-w-0 gap-0 overflow-hidden rounded-2xl p-0">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-4 sm:px-6">
+            <div className="flex items-center gap-3">
+              <span className="flex size-10 items-center justify-center rounded-xl bg-primary/5 text-primary">
+                <MessageCircle aria-hidden="true" className="size-5" />
+              </span>
+              <div>
+                <h3 className="font-semibold">Platform support</h3>
+                <p className="text-xs text-muted-foreground">Private organization conversation</p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={refreshing}
+              onClick={() => void refresh()}
+            >
+              <RefreshCw aria-hidden="true" className={`size-4 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Refreshing…' : 'Refresh'}
+            </Button>
+          </div>
+
+          {error && (
+            <div className="mx-4 mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-destructive/25 bg-destructive/5 p-3 sm:mx-6">
+              <p role="alert" className="text-sm text-destructive">
+                {error}
+              </p>
+              <Button variant="outline" size="sm" disabled={refreshing} onClick={() => void refresh()}>
+                Try again
+              </Button>
+            </div>
+          )}
+
+          <div
+            aria-label="Organization support conversation"
+            aria-live="polite"
+            className="min-h-72 space-y-4 bg-muted/20 p-4 sm:min-h-96 sm:p-6"
+          >
+            {!loaded && !error && (
+              <p role="status" className="rounded-xl border bg-card p-4 text-sm text-muted-foreground">
+                Loading your conversation…
+              </p>
+            )}
+            {loaded && messages.length === 0 && !error && (
+              <EmptyState
+                icon={<MessageCircle className="size-5" />}
+                title="No messages yet."
+                description="Send a note to the platform team and the conversation will appear here."
+              />
+            )}
+            {messages.map((item) => {
+              const incoming = item.direction === 'platform_to_organization'
+              const status = incoming
+                ? item.read_at
+                  ? 'Read'
+                  : 'Unread'
+                : item.platform_read_at
+                  ? 'Read by platform'
+                  : 'Awaiting platform'
+              const createdAt = new Date(item.created_at)
+              return (
+                <article
+                  key={item.id}
+                  className={`flex ${incoming ? 'justify-start' : 'justify-end'}`}
+                >
+                  <div
+                    className={`w-full max-w-[90%] space-y-2 rounded-2xl border p-4 shadow-sm sm:max-w-[78%] ${
+                      incoming
+                        ? 'rounded-tl-md bg-card'
+                        : 'rounded-tr-md border-primary/15 bg-primary/[0.06]'
+                    }`}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+                      <p className="text-xs font-semibold text-foreground">
+                        {incoming ? 'Platform team' : 'Your organization'}
+                      </p>
+                      <time
+                        className="text-xs text-muted-foreground"
+                        dateTime={
+                          Number.isNaN(createdAt.getTime()) ? undefined : createdAt.toISOString()
+                        }
+                      >
+                        {Number.isNaN(createdAt.getTime())
+                          ? 'Date unavailable'
+                          : createdAt.toLocaleString()}
+                      </time>
+                    </div>
+                    <p className="whitespace-pre-wrap break-words text-sm leading-6">{item.body}</p>
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-2">
+                      <span className="text-xs text-muted-foreground">{status}</span>
+                      {incoming && !item.read_at && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => void markRead(item.id)}
+                        >
+                          Mark as read
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              )
+            })}
+          </div>
+
+          <form onSubmit={(event) => void send(event)} className="space-y-3 border-t p-4 sm:p-6">
+            <label htmlFor="support-message" className="text-sm font-semibold">
+              Message the platform team
+            </label>
+            <Textarea
+              id="support-message"
+              value={body}
+              onChange={(event) => setBody(event.target.value)}
+              placeholder="Describe how we can help…"
+              rows={4}
+              maxLength={5000}
+              required
+              aria-describedby="support-message-hint support-message-count"
+              disabled={sending}
+            />
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p id="support-message-hint" className="text-xs text-muted-foreground">
+                Keep messages clear and avoid sharing passwords or payment details.
+              </p>
+              <span id="support-message-count" className="text-xs tabular-nums text-muted-foreground">
+                {body.length}/5000
+              </span>
+            </div>
+            <div className="flex justify-end">
+              <Button type="submit" disabled={sending || !body.trim()}>
+                <Send aria-hidden="true" className="size-4" />
+                {sending ? 'Sending…' : 'Send message'}
+              </Button>
+            </div>
+          </form>
+        </Card>
+
+        <aside className="space-y-4">
+          <Card className="rounded-2xl p-5">
+            <span className="flex size-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+              <ShieldCheck aria-hidden="true" className="size-5" />
+            </span>
+            <h3 className="font-semibold">Private & secure</h3>
+            <p className="text-sm leading-6 text-muted-foreground">
+              This conversation is only available to your organization owner and the platform team.
+            </p>
+          </Card>
+          <Card className="rounded-2xl p-5">
+            <h3 className="font-semibold">Need a quicker answer?</h3>
+            <p className="text-sm leading-6 text-muted-foreground">
+              Include the property or unit name and a short description of the issue so the team can
+              help faster.
+            </p>
+          </Card>
+        </aside>
       </div>
-      <form onSubmit={event => void send(event)}>
-        <label>Message to platform <textarea className="block w-full rounded border p-2" value={body} onChange={event => setBody(event.target.value)} required maxLength={5000} /></label>
-        <button className="rounded border p-2" disabled={sending || !body.trim()}>{sending ? 'Sending…' : 'Send message'}</button>
-      </form>
-    </section>
+    </div>
   )
 }

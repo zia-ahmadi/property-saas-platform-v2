@@ -101,7 +101,7 @@ it('recovers when the final page becomes empty', async () => {
         },
   )
   await userEvent.click(screen.getByRole('button', { name: 'Refresh' }))
-  expect(await screen.findByText('Page 1 of 1 · 1 units')).toBeInTheDocument()
+  expect(await screen.findByText('Page 1 of 1 · 1 unit')).toBeInTheDocument()
 })
 it('creates only allowed DTO fields', async () => {
   const invalidation = vi.spyOn(QueryClient.prototype, 'invalidateQueries')
@@ -285,7 +285,7 @@ it('shows loading, empty and network failure states', async () => {
   show()
   await screen.findByText('Loading units…')
   finish({ ...paged(), content: [], totalElements: 0, totalPages: 0 })
-  await screen.findByText('No units found for this property.')
+  await screen.findByRole('heading', { name: 'No units yet' })
   mocks.request.mockRejectedValue(
     new ApiError({ status: 0, message: 'private', isNetworkError: true }),
   )

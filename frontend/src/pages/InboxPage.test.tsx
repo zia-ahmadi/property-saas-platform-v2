@@ -52,3 +52,38 @@ it('shows platform replies automatically without reloading the organization inbo
     vi.useRealTimers()
   }
 })
+
+it('loads the inbox once even when the page starts hidden', async () => {
+  vi.useFakeTimers()
+  vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden')
+  const service = {
+    request: vi.fn(async () => []),
+    signOut: vi.fn(),
+  } as unknown as AuthLifecycleService
+  const organization = {
+    current: { organizationId: 'org-1', organizationName: 'Northstar', organizationSlug: 'northstar', role: 'OWNER' },
+    organizations: [],
+    forbidden: false,
+    can: () => true,
+    select: vi.fn(),
+    request: vi.fn(),
+    queryKey: () => ['org'],
+  } as unknown as OrganizationContextValue
+  render(
+    <AuthContext.Provider value={{ state: { status: 'authenticated', session: { user: { id: 'owner', email: 'owner@example.test', firstName: 'Org', lastName: 'Owner' }, organizations: [] } }, service }}>
+      <OrganizationContext.Provider value={organization}>
+        <MemoryRouter initialEntries={['/inbox']}>
+          <Routes><Route path="/inbox" element={<InboxPage />} /></Routes>
+        </MemoryRouter>
+      </OrganizationContext.Provider>
+    </AuthContext.Provider>,
+  )
+
+  try {
+    await act(async () => { await Promise.resolve(); await Promise.resolve() })
+    expect(service.request).toHaveBeenCalledWith('get', 'api/v1/my-organizations/org-1/messages')
+    expect(screen.getByText('No messages yet.')).toBeVisible()
+  } finally {
+    vi.useRealTimers()
+  }
+})
