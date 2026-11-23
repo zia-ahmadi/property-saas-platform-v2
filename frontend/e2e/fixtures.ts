@@ -91,6 +91,7 @@ export const test = base.extend<{ qa: {
           BEGIN;
           DELETE FROM renter_audit_events WHERE organization_id IN (${orgs});
           DELETE FROM renters WHERE organization_id IN (${orgs});
+          DELETE FROM maintenance_requests WHERE organization_id IN (${orgs});
           DELETE FROM units WHERE property_id IN (
             SELECT id FROM properties WHERE organization_id IN (${orgs})
           );

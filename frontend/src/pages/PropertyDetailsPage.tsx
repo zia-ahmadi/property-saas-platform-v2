@@ -212,6 +212,15 @@ export function PropertyDetailsPage() {
                   You have read-only access to this property.
                 </p>
               )}
+              {org.can('MAINTENANCE_MANAGE') && (
+                <Link
+                  className={buttonVariants({ variant: 'outline', className: 'w-full justify-between' })}
+                  to={`/maintenance?propertyId=${property.id}`}
+                >
+                  View maintenance requests
+                  <ArrowRight aria-hidden="true" className="size-4" />
+                </Link>
+              )}
             </Card>
           </div>
         </>
