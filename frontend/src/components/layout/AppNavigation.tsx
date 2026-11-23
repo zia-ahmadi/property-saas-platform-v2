@@ -1,4 +1,4 @@
-import { Building2, LayoutDashboard, Settings, Users, Wrench } from 'lucide-react'
+import { Building2, KeyRound, LayoutDashboard, Settings, Users, Wrench } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router'
 import { useOptionalOrganization } from '@/features/organization/context'
 
@@ -16,6 +16,13 @@ const destinations = [
     label: 'Renters',
     icon: Users,
     permission: 'PROPERTY_VIEW' as const,
+    group: 'Portfolio',
+  },
+  {
+    to: '/leases',
+    label: 'Leasing',
+    icon: KeyRound,
+    permission: 'LEASE_MANAGE' as const,
     group: 'Portfolio',
   },
   {

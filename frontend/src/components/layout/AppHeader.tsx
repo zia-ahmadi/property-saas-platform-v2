@@ -38,7 +38,9 @@ export function AppHeader() {
                         ? 'Settings'
                         : matchPath('/maintenance/*', pathname)
                           ? 'Maintenance'
-                          : 'Dashboard'
+                          : matchPath('/leases/*', pathname)
+                            ? 'Leasing'
+                            : 'Dashboard'
 
   return (
     <header className="flex min-h-16 min-w-0 flex-wrap items-center justify-between gap-4 border-b bg-card px-4 py-3 text-card-foreground sm:px-6 lg:px-8">

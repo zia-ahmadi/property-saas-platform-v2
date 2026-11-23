@@ -325,7 +325,7 @@ public UnitResponse updateUnitAvailability(
 
     // 6. Retrieve the unit within the property and organization.
     Unit unit = unitRepository
-            .findByIdAndProperty_IdAndProperty_Organization_Id(
+            .findForUpdateByIdAndProperty_IdAndProperty_Organization_Id(
                     unitId,
                     propertyId,
                     organizationId

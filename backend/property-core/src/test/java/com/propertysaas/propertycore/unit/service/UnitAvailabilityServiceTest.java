@@ -107,7 +107,7 @@ class UnitAvailabilityServiceTest {
                 propertyId, organizationId
         )).thenReturn(Optional.of(property));
 
-        when(unitRepository.findByIdAndProperty_IdAndProperty_Organization_Id(
+        when(unitRepository.findForUpdateByIdAndProperty_IdAndProperty_Organization_Id(
                 unitId, propertyId, organizationId
         )).thenReturn(Optional.of(unit));
     }
@@ -255,7 +255,7 @@ class UnitAvailabilityServiceTest {
                 propertyId, organizationId
         )).thenReturn(Optional.of(property));
 
-        when(unitRepository.findByIdAndProperty_IdAndProperty_Organization_Id(
+        when(unitRepository.findForUpdateByIdAndProperty_IdAndProperty_Organization_Id(
                 unitId, propertyId, organizationId
         )).thenReturn(Optional.empty());
 

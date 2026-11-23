@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router'
 import { AppShell } from '@/layouts/AppShell'
 import { LoginPage } from '@/pages/LoginPage'
+import { LeasesPage } from '@/pages/LeasesPage'
+import { LeaseDetailsPage } from '@/pages/LeaseDetailsPage'
 import { MaintenancePage } from '@/pages/MaintenancePage'
 import { MaintenanceRequestPage } from '@/pages/MaintenanceRequestPage'
 import { DashboardPage } from '@/pages/DashboardPage'
@@ -44,6 +46,12 @@ export function AppRouter() {
             <Route element={<OrganizationRoute permission="MEMBERSHIP_MANAGE" />}><Route path="/team" element={<TeamPage />} /><Route path="/inbox" element={<InboxPage />} /></Route>
             <Route element={<OrganizationRoute permission="ORGANIZATION_VIEW" />}>
               <Route path="/dashboard" element={<DashboardPage />} />
+            </Route>
+            <Route element={<OrganizationRoute permission="LEASE_MANAGE" />}>
+              <Route path="/leases" element={<LeasesPage />} />
+              <Route path="/leases/new" element={<LeaseDetailsPage mode="new" />} />
+              <Route path="/leases/:leaseId" element={<LeaseDetailsPage />} />
+              <Route path="/leases/:leaseId/edit" element={<LeaseDetailsPage mode="edit" />} />
             </Route>
             <Route element={<OrganizationRoute permission="MAINTENANCE_MANAGE" />}>
               <Route path="/maintenance" element={<MaintenancePage />} />

@@ -5,7 +5,7 @@ import { useOrganization } from '@/features/organization/context'
 import { Input } from '@/components/ui/input'
 import { ApiError } from '@/lib/api/errors'
 import type { UnitPage } from '@/features/units/api'
-import { Select } from './Select'
+import { Select } from '@/components/ui/select'
 
 export interface LocationOption { id: string; label: string }
 

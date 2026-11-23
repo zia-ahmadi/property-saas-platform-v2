@@ -12,7 +12,7 @@ import { useOrganization } from '@/features/organization/context'
 import { ApiError } from '@/lib/api/errors'
 import type { Property } from '@/features/properties/api'
 import { PropertyPicker, UnitPicker, type LocationOption } from '@/features/maintenance/LocationPicker'
-import { Select } from '@/features/maintenance/Select'
+import { Select } from '@/components/ui/select'
 import { categories, formatDate, maintenancePropertyId, priorities, statuses } from '@/features/maintenance/api'
 import type { MaintenanceInput, MaintenanceRequest } from '@/features/maintenance/api'
 

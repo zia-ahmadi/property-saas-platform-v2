@@ -89,6 +89,7 @@ export const test = base.extend<{ qa: {
         const users = accounts.map(a => `'${uuid(a.userId)}'`).join(',')
         sql(`
           BEGIN;
+          DELETE FROM leases WHERE organization_id IN (${orgs});
           DELETE FROM renter_audit_events WHERE organization_id IN (${orgs});
           DELETE FROM renters WHERE organization_id IN (${orgs});
           DELETE FROM maintenance_requests WHERE organization_id IN (${orgs});

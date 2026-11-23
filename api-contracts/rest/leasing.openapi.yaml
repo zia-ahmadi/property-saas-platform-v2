@@ -1,0 +1,211 @@
+openapi: 3.1.0
+info:
+  title: Property SaaS Leasing API
+  version: 1.0.0
+  description: >-
+    Requires LEASE_MANAGE in the selected organization. A draft can be activated
+    manually during its term using the UTC calendar date. Activation marks its
+    unit occupied, and ending the lease releases the unit.
+security:
+  - bearerAuth: []
+paths:
+  /api/v1/organizations/{organizationId}/leases:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+    get:
+      summary: Search the lease register
+      parameters:
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Page'
+        - { name: size, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 10 } }
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/Status' } }
+        - name: endingSoon
+          in: query
+          description: Active leases with an end date within 30 days or already past.
+          schema: { type: boolean, default: false }
+      responses:
+        '200':
+          description: Matching leases ordered by most recent update
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Page'
+                  - properties:
+                      content: { type: array, items: { $ref: '#/components/schemas/Lease' } }
+        '400': { description: Invalid query }
+        '403': { description: Organization access or permission denied }
+    post:
+      summary: Create a draft lease
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Terms' }
+      responses:
+        '201':
+          description: Draft created
+          headers:
+            Location: { schema: { type: string, format: uri-reference } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Lease' }
+        '400': { description: Invalid terms, unit, or renter }
+        '403': { description: Organization access or permission denied }
+  /api/v1/organizations/{organizationId}/leases/units:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+    get:
+      summary: Find units in active properties by property name or unit number
+      parameters:
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Page'
+        - { name: size, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses:
+        '200':
+          description: Paginated unit options
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Page'
+                  - properties:
+                      content:
+                        type: array
+                        items:
+                          type: object
+                          required: [id, propertyId, propertyName, unitNumber, availabilityStatus]
+                          properties:
+                            id: { type: string, format: uuid }
+                            propertyId: { type: string, format: uuid }
+                            propertyName: { type: string }
+                            unitNumber: { type: string }
+                            availabilityStatus: { type: string, enum: [AVAILABLE, OCCUPIED, UNAVAILABLE] }
+        '400': { description: Invalid query }
+        '403': { description: Organization access or permission denied }
+  /api/v1/organizations/{organizationId}/leases/summary:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+    get:
+      summary: Count drafts, active leases, upcoming or overdue end dates, and ended leases
+      responses:
+        '200':
+          description: Organization-level counts
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [drafts, active, endingSoon, ended, asOf]
+                properties:
+                  drafts: { type: integer }
+                  active: { type: integer }
+                  endingSoon: { type: integer }
+                  ended: { type: integer }
+                  asOf: { type: string, format: date }
+        '403': { description: Organization access or permission denied }
+  /api/v1/organizations/{organizationId}/leases/{id}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+      - $ref: '#/components/parameters/LeaseId'
+    get:
+      summary: Read a lease
+      responses:
+        '200': { $ref: '#/components/responses/Lease' }
+        '403': { description: Organization access or permission denied }
+        '404': { description: Lease not found }
+    put:
+      summary: Replace draft lease terms
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [terms, version]
+              properties:
+                terms: { $ref: '#/components/schemas/Terms' }
+                version: { type: integer, minimum: 0 }
+      responses:
+        '200': { $ref: '#/components/responses/Lease' }
+        '400': { description: Invalid terms, unit, or renter }
+        '403': { description: Organization access or permission denied }
+        '404': { description: Lease not found }
+        '409': { description: Lease is no longer a draft or the version is stale }
+  /api/v1/organizations/{organizationId}/leases/{id}/transition:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+      - $ref: '#/components/parameters/LeaseId'
+    post:
+      summary: Activate or cancel a draft, or end an active lease
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action, version]
+              properties:
+                action: { type: string, enum: [ACTIVATE, END, CANCEL] }
+                version: { type: integer, minimum: 0 }
+      responses:
+        '200': { $ref: '#/components/responses/Lease' }
+        '400': { description: Invalid input or an inactive renter or property }
+        '403': { description: Organization access or permission denied }
+        '404': { description: Lease not found }
+        '409': { description: Transition conflicts with lease version, status, dates, or unit availability }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    OrganizationId: { name: organizationId, in: path, required: true, schema: { type: string, format: uuid } }
+    LeaseId: { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    Search: { name: search, in: query, schema: { type: string, maxLength: 150 } }
+    Page: { name: page, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+  responses:
+    Lease:
+      description: Lease details
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Lease' }
+  schemas:
+    Status: { type: string, enum: [DRAFT, ACTIVE, ENDED, CANCELLED] }
+    Page:
+      type: object
+      required: [content, page, size, totalElements, totalPages, first, last]
+      properties:
+        content: { type: array }
+        page: { type: integer }
+        size: { type: integer }
+        totalElements: { type: integer }
+        totalPages: { type: integer }
+        first: { type: boolean }
+        last: { type: boolean }
+    Terms:
+      type: object
+      required: [unitId, renterId, startsOn, monthlyRent, deposit, currency]
+      properties:
+        unitId: { type: string, format: uuid }
+        renterId: { type: string, format: uuid }
+        startsOn: { type: string, format: date }
+        endsOn: { type: [string, 'null'], format: date }
+        monthlyRent: { type: number, minimum: 0, maximum: 9999999999.99, multipleOf: 0.01 }
+        deposit: { type: number, minimum: 0, maximum: 9999999999.99, multipleOf: 0.01 }
+        currency: { type: string, pattern: '^[A-Z]{3}$' }
+        notes: { type: [string, 'null'], maxLength: 4000 }
+    Lease:
+      allOf:
+        - $ref: '#/components/schemas/Terms'
+        - type: object
+          required: [id, propertyId, propertyName, renterName, unitNumber, status, version, createdAt, updatedAt]
+          properties:
+            id: { type: string, format: uuid }
+            propertyId: { type: string, format: uuid }
+            propertyName: { type: string }
+            renterName: { type: string }
+            unitNumber: { type: string }
+            status: { $ref: '#/components/schemas/Status' }
+            version: { type: integer, minimum: 0 }
+            activatedAt: { type: [string, 'null'], format: date-time }
+            closedAt: { type: [string, 'null'], format: date-time }
+            createdAt: { type: string, format: date-time }
+            updatedAt: { type: string, format: date-time }

@@ -4,9 +4,11 @@ package com.propertysaas.propertycore.unit.repository;
 import com.propertysaas.propertycore.unit.entity.Unit;
 import com.propertysaas.propertycore.unit.entity.UnitAvailabilityStatus;
 
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -16,6 +18,13 @@ public interface UnitRepository
 
     // Retrieve a unit only within its property and organization.
     Optional<Unit> findByIdAndProperty_IdAndProperty_Organization_Id(
+            UUID unitId,
+            UUID propertyId,
+            UUID organizationId
+    );
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<Unit> findForUpdateByIdAndProperty_IdAndProperty_Organization_Id(
             UUID unitId,
             UUID propertyId,
             UUID organizationId

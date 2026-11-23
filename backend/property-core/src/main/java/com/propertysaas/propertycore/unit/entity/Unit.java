@@ -17,6 +17,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import com.propertysaas.propertycore.common.exception.ConflictException;
@@ -29,6 +30,7 @@ import java.util.UUID;
 import tools.jackson.databind.JsonNode;
 
 @Entity
+@DynamicUpdate
 @Table(
         name = "units",
         uniqueConstraints = {

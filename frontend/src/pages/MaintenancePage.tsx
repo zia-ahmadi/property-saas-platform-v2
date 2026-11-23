@@ -7,7 +7,7 @@ import { Pagination } from '@/components/ui/pagination'
 import { LoadingState } from '@/components/ui/loading-state'
 import { ErrorState } from '@/components/ui/error-state'
 import { EmptyState } from '@/components/ui/empty-state'
-import { Select } from '@/features/maintenance/Select'
+import { Select } from '@/components/ui/select'
 import { useOrganization } from '@/features/organization/context'
 import type { Property } from '@/features/properties/api'
 import { categories, formatDate, isOverdue, maintenancePropertyId, priorities, statuses } from '@/features/maintenance/api'
@@ -44,7 +44,8 @@ function MaintenanceQueue() {
   const pageNumber = Number(params.get('page') ?? 0)
   const page = Number.isInteger(pageNumber) && pageNumber >= 0 && pageNumber <= 2147483647 ? pageNumber : 0
   const setFilter = (key: string, value: string) => {
-    const next = new URLSearchParams(params)
+    // Browser history is updated before the router renders the next search state.
+    const next = new URLSearchParams(window.location.search)
     if (value) next.set(key, value)
     else next.delete(key)
     if (key !== 'page') next.delete('page')
