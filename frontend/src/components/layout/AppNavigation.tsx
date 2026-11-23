@@ -1,7 +1,5 @@
 import { Building2, LayoutDashboard, Settings, Users } from 'lucide-react'
-import { NavLink } from 'react-router'
-import { useEffect, useState } from 'react'
-import { useOptionalAuth } from '@/features/auth/context'
+import { NavLink, useLocation } from 'react-router'
 import { useOptionalOrganization } from '@/features/organization/context'
 
 const destinations = [
@@ -21,14 +19,12 @@ interface AppNavigationProps {
 
 export function AppNavigation({ label = 'Main navigation', onNavigate }: AppNavigationProps) {
   const organization = useOptionalOrganization()
-  const auth = useOptionalAuth()
-  const [platformOwner, setPlatformOwner] = useState(false)
-  useEffect(() => { let alive = true; if (auth?.state.status === 'authenticated') void auth.service.request('get', 'api/v1/platform/me').then(() => { if (alive) setPlatformOwner(true) }).catch(() => { if (alive) setPlatformOwner(false) }); return () => { alive = false } }, [auth?.service, auth?.state.status])
+  const { pathname } = useLocation()
+  const platformWorkspace = pathname === '/platform' || pathname.startsWith('/platform/')
   const available = destinations.filter(item => !('permission' in item) || !item.permission || (organization?.can(item.permission) ?? false))
   return (
     <nav aria-label={label} className="flex flex-col gap-1 p-4">
-      {auth?.state.status === 'authenticated' && platformOwner && <NavLink to="/platform" onClick={onNavigate} className="rounded-lg px-3 py-2.5 text-sm">Platform administration</NavLink>}
-      {available.map(({ to, label, icon: Icon }) => (
+      {platformWorkspace ? <NavLink to="/platform" onClick={onNavigate} className="flex min-h-11 items-center rounded-lg bg-sidebar-accent px-3 py-2.5 text-sm font-semibold">Organizations</NavLink> : available.map(({ to, label, icon: Icon }) => (
         <NavLink
           key={to}
           to={to}

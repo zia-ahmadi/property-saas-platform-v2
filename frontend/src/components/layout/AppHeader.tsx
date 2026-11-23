@@ -1,4 +1,5 @@
-import { matchPath, useLocation } from 'react-router'
+import { Link, matchPath, useLocation } from 'react-router'
+import { usePlatformAccess } from '@/features/platform/context'
 import { MobileNavigation } from './MobileNavigation'
 import { useOptionalAuth } from '@/features/auth/context'
 import { useState } from 'react'
@@ -10,8 +11,10 @@ export function AppHeader() {
   const { pathname } = useLocation()
   const auth = useOptionalAuth()
   const organization = useOptionalOrganization()
+  const platformAccess = usePlatformAccess()
+  const platformWorkspace = pathname === '/platform' || pathname.startsWith('/platform/')
   const [warning, setWarning] = useState(false)
-  const title = matchPath('/renters/*', pathname)
+  const title = platformWorkspace ? 'Platform workspace' : matchPath('/renters/*', pathname)
     ? 'Renters'
     : matchPath('/properties/:propertyId/units/*', pathname)
       ? 'Units'
@@ -31,7 +34,8 @@ export function AppHeader() {
       </div>
 
       <div className="flex w-full min-w-0 flex-wrap items-center gap-3 sm:w-auto">
-        {organization &&
+        {platformAccess === 'allowed' && <Link className="rounded border px-3 py-2 text-sm" to={platformWorkspace ? '/dashboard' : '/platform'}>{platformWorkspace ? 'Switch to organization workspace' : 'Switch to platform workspace'}</Link>}
+        {!platformWorkspace && organization &&
           (organization.current ? (
             <label className="flex min-w-0 flex-1 flex-wrap items-center gap-2 text-sm sm:flex-none">
               Organization{' '}

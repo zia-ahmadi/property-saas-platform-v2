@@ -3,12 +3,13 @@ import { PortfolioBreadcrumbs } from '@/components/layout/PortfolioBreadcrumbs'
 import { Outlet } from 'react-router'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { AppSidebar } from '@/components/layout/AppSidebar'
+import { PlatformAccessProvider } from '@/features/platform/access'
 
 export function AppShell() {
   const contentRef = useRef<HTMLElement>(null)
 
   return (
-    <div className="min-h-dvh min-w-0 bg-background text-foreground md:flex">
+    <PlatformAccessProvider><div className="min-h-dvh min-w-0 bg-background text-foreground md:flex">
       <a
         href="#main-content"
         onClick={() => contentRef.current?.focus()}
@@ -30,6 +31,6 @@ export function AppShell() {
           <Outlet />
         </main>
       </div>
-    </div>
+    </div></PlatformAccessProvider>
   )
 }

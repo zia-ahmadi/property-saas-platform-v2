@@ -12,6 +12,7 @@ import { SettingsPage } from '@/pages/SettingsPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { ProtectedRoute } from './ProtectedRoute'
 import { OrganizationRoute } from './OrganizationRoute'
+import { PlatformRoute } from './PlatformRoute'
 import { RegisterPage } from '@/pages/RegisterPage'
 import { ForbiddenPage } from '@/pages/ForbiddenPage'
 import { UnauthorizedPage } from '@/pages/UnauthorizedPage'
@@ -35,7 +36,7 @@ export function AppRouter() {
         <Route element={<ProtectedRoute />}>
           <Route element={<AppShell />}>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/platform" element={<PlatformPage />} />
+            <Route element={<PlatformRoute />}><Route path="/platform" element={<PlatformPage />} /></Route>
             <Route path="/organization-messages/:organizationId" element={<InboxPage />} />
             <Route path="/access" element={<section><h2 className="text-2xl font-bold">Organization access</h2><p>Restricted organizations and their status appear below.</p><RestrictedOrganizations /></section>} />
             <Route element={<OrganizationRoute permission="MEMBERSHIP_MANAGE" />}><Route path="/team" element={<TeamPage />} /><Route path="/inbox" element={<InboxPage />} /></Route>
