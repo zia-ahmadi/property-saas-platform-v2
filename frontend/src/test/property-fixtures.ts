@@ -10,7 +10,10 @@ export const propertyOrganization = {
         totalUnits: 0, availableUnits: 0, unavailableUnits: 0, occupiedUnits: 0,
       }
     }
-    if (path === 'renters' || path.endsWith('/units')) {
+    if (path === 'billing/invoices/summary') {
+      return { open: 0, overdue: 0, paid: 0, totals: [], asOf: '2026-11-24' }
+    }
+    if (path === 'renters' || path === 'billing/invoices' || path.endsWith('/units')) {
       return { content: [], page: 0, size: 10, totalElements: 0, totalPages: 0, first: true, last: true }
     }
     if (path === 'properties') {

@@ -129,6 +129,8 @@ function LeaseScreen({ leaseId, mode }: { leaseId?: string; mode: 'detail' | 'ne
               <div className="flex flex-wrap gap-4 text-sm">
                 <Link className="inline-flex items-center gap-1 underline underline-offset-4" to={`/renters/${lease.renterId}`}>View renter <ArrowUpRight aria-hidden="true" className="size-4" /></Link>
                 <Link className="inline-flex items-center gap-1 underline underline-offset-4" to={`/properties/${lease.propertyId}/units/${lease.unitId}`}>View unit <ArrowUpRight aria-hidden="true" className="size-4" /></Link>
+                {org.can('BILLING_MANAGE') && lease.monthlyRent > 0 && (lease.status === 'ACTIVE' || lease.status === 'ENDED') &&
+                  <Link className="inline-flex items-center gap-1 underline underline-offset-4" to={`/billing/new?lease=${lease.id}`}>Issue rent invoice <ArrowUpRight aria-hidden="true" className="size-4" /></Link>}
               </div>
               {activationBlocked && <p className="rounded-lg border bg-muted/60 p-3 text-sm">A draft can be activated during its lease term.</p>}
               {actionError && <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm">{actionError}</p>}

@@ -1,6 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router'
 import { AppShell } from '@/layouts/AppShell'
 import { LoginPage } from '@/pages/LoginPage'
+import { BillingPage } from '@/pages/BillingPage'
+import { IssueInvoicePage } from '@/pages/IssueInvoicePage'
+import { InvoiceDetailsPage } from '@/pages/InvoiceDetailsPage'
 import { LeasesPage } from '@/pages/LeasesPage'
 import { LeaseDetailsPage } from '@/pages/LeaseDetailsPage'
 import { MaintenancePage } from '@/pages/MaintenancePage'
@@ -52,6 +55,11 @@ export function AppRouter() {
               <Route path="/leases/new" element={<LeaseDetailsPage mode="new" />} />
               <Route path="/leases/:leaseId" element={<LeaseDetailsPage />} />
               <Route path="/leases/:leaseId/edit" element={<LeaseDetailsPage mode="edit" />} />
+            </Route>
+            <Route element={<OrganizationRoute permission="BILLING_MANAGE" />}>
+              <Route path="/billing" element={<BillingPage />} />
+              <Route path="/billing/new" element={<IssueInvoicePage />} />
+              <Route path="/billing/:invoiceId" element={<InvoiceDetailsPage />} />
             </Route>
             <Route element={<OrganizationRoute permission="MAINTENANCE_MANAGE" />}>
               <Route path="/maintenance" element={<MaintenancePage />} />

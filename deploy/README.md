@@ -116,28 +116,40 @@ Property, unit, and renter identifying images are stored in PostgreSQL (JPEG or
 PNG, up to 5 MB and 10 megapixels each). They are included in PostgreSQL backups
 and persist with the database volume.
 
-## 6. Local Vite development (no Docker)
+## 6. Local development
+
+Start PostgreSQL and make sure the repository-root `.env` contains its
+`POSTGRES_PASSWORD`, a base64-encoded `JWT_SECRET`, and a separate
+base64-encoded `BROWSER_CSRF_SECRET`. Generate each missing signing key
+independently with `openssl rand -base64 32`.
+
+Open the repository root in VS Code and choose **Property Core (local development)**
+from **Run and Debug**. The launch profile reads the root `.env` and activates the
+Spring development profile. To start the same backend from a terminal at the
+repository root, run:
 
 ```sh
-cd frontend
-npm ci
-cp .env.example .env          # then set VITE_API_BASE_URL
-npm run dev
+(
+  set -a
+  . ./.env
+  set +a
+  cd backend/property-core
+  ./mvnw -Dspring-boot.run.profiles=development spring-boot:run
+)
 ```
 
-`VITE_API_BASE_URL` must be an absolute `http(s)` URL with no credentials,
-query string or fragment. The backend must allow the dev server Origin:
+From a second terminal at the repository root, run:
 
 ```sh
-# backend/property-core
-SPRING_PROFILES_ACTIVE=development \
-BROWSER_DEV_ALLOWED_ORIGINS=http://localhost:5173 \
-JWT_SECRET=… BROWSER_CSRF_SECRET=… POSTGRES_PASSWORD=… \
-./mvnw spring-boot:run
+npm --prefix frontend ci
+npm --prefix frontend run dev
 ```
 
-In the `development` profile the refresh cookie is `dev-refresh`, `Secure=false`
-so it works over plain HTTP on localhost.
+Open `http://localhost:5173`. The frontend's development API URL defaults to
+`http://localhost:8081` in `frontend/.env.development`. If Vite uses another port,
+set `BROWSER_DEV_ALLOWED_ORIGINS` to the exact URL Vite prints and restart the
+backend. Use the same hostname for both services so browser session cookies work.
+The development profile uses the `dev-refresh` cookie with `Secure=false`.
 
 ## 7. Dockerized development / testing
 

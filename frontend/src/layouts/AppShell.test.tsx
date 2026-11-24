@@ -42,6 +42,7 @@ it.each([
   { destination: 'Dashboard', heading: 'Enterprise Portfolio Dashboard' },
   { destination: 'Properties', heading: 'Properties' },
   { destination: 'Renters', heading: 'Renter directory' },
+  { destination: 'Billing', heading: 'Rent billing' },
   { destination: 'Settings', heading: 'Settings' },
 ])(
   'navigates to $destination and marks only that destination active',
@@ -151,7 +152,7 @@ it('opens a labelled mobile menu while retaining the desktop navigation', async 
   expect(trigger).toHaveAttribute('aria-expanded', 'true')
   expect(within(dialog).getByRole('navigation', { name: 'Mobile navigation' })).toBeInTheDocument()
   expect(within(dialog).getAllByRole('link').map(link => link.textContent)).toEqual([
-    'Dashboard', 'Properties', 'Renters', 'Leasing', 'Maintenance', 'Organization access', 'Team', 'Inbox', 'Settings',
+    'Dashboard', 'Properties', 'Renters', 'Leasing', 'Billing', 'Maintenance', 'Organization access', 'Team', 'Inbox', 'Settings',
   ])
 })
 

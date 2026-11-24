@@ -1,0 +1,14 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Property Core (local development)",
+            "request": "launch",
+            "mainClass": "com.propertysaas.propertycore.PropertyCoreApplication",
+            "cwd": "${workspaceFolder}/backend/property-core",
+            "envFile": "${workspaceFolder}/.env",
+            "args": "--spring.profiles.active=development"
+        }
+    ]
+}
