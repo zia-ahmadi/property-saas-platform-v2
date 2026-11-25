@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router'
+import { BrowserRouter, Routes, Route } from 'react-router'
 import { AppShell } from '@/layouts/AppShell'
 import { LoginPage } from '@/pages/LoginPage'
 import { BillingPage } from '@/pages/BillingPage'
@@ -27,13 +27,14 @@ import { TeamPage } from '@/pages/TeamPage'
 import { InboxPage } from '@/pages/InboxPage'
 import { PlatformPage } from '@/pages/PlatformPage'
 import { InvitationPage } from '@/pages/InvitationPage'
-import { RestrictedOrganizations } from '@/features/organization/RestrictedOrganizations'
+import { OrganizationAccessPage } from '@/features/organization/RestrictedOrganizations'
+import { HomePage } from '@/pages/HomePage'
 
 export function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Login route outside the application shell */}
+        <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/invite" element={<InvitationPage />} />
@@ -42,10 +43,9 @@ export function AppRouter() {
         {/* Shared dashboard layout */}
         <Route element={<ProtectedRoute />}>
           <Route element={<AppShell />}>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route element={<PlatformRoute />}><Route path="/platform" element={<PlatformPage />} /></Route>
             <Route path="/organization-messages/:organizationId" element={<InboxPage />} />
-            <Route path="/access" element={<section><h2 className="text-2xl font-bold">Organization access</h2><p>Restricted organizations and their status appear below.</p><RestrictedOrganizations /></section>} />
+            <Route path="/access" element={<OrganizationAccessPage />} />
             <Route element={<OrganizationRoute permission="MEMBERSHIP_MANAGE" />}><Route path="/team" element={<TeamPage />} /><Route path="/inbox" element={<InboxPage />} /></Route>
             <Route element={<OrganizationRoute permission="ORGANIZATION_VIEW" />}>
               <Route path="/dashboard" element={<DashboardPage />} />

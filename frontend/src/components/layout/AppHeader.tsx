@@ -31,7 +31,7 @@ export function AppHeader() {
                 : matchPath('/team', pathname)
                   ? 'Team'
                   : matchPath('/inbox', pathname) || matchPath('/organization-messages/:organizationId', pathname)
-                    ? 'Inbox'
+                    ? 'Support'
                     : matchPath('/access', pathname)
                       ? 'Organization access'
                       : matchPath('/settings', pathname)
@@ -52,7 +52,7 @@ export function AppHeader() {
       </div>
 
       <div className="flex w-full min-w-0 flex-wrap items-center gap-3 sm:w-auto">
-        {platformAccess === 'allowed' && <Link className="rounded border px-3 py-2 text-sm" to={platformWorkspace ? '/dashboard' : '/platform'}>{platformWorkspace ? 'Switch to organization workspace' : 'Switch to platform workspace'}</Link>}
+        {platformAccess === 'allowed' && <Link className="rounded border px-3 py-2 text-sm" to={platformWorkspace ? (organization?.current ? '/dashboard' : '/access') : '/platform'}>{platformWorkspace ? 'Switch to organization workspace' : 'Switch to platform workspace'}</Link>}
         {!platformWorkspace && organization &&
           (organization.current ? (
             <label className="flex min-w-0 flex-1 flex-wrap items-center gap-2 text-sm sm:flex-none">

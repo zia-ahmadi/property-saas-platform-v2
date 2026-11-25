@@ -104,6 +104,8 @@ describe('accessibility audit', () => {
     expect(email).toBeRequired()
     expect(password).toBeRequired()
     await user.tab()
+    expect(screen.getByRole('link', { name: 'Home' })).toHaveFocus()
+    await user.tab()
     expect(email).toHaveFocus()
     await user.tab()
     expect(password).toHaveFocus()

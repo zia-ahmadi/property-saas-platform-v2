@@ -122,16 +122,12 @@ it('lets keyboard users skip navigation and focus the main content', async () =>
   expect(screen.getByRole('main', { name: 'Main content' })).toHaveFocus()
 })
 
-it('preserves the root redirect to the dashboard shell', () => {
+it('opens the public homepage at the root route', () => {
   renderRoute('/')
-  expect(
-    within(screen.getByRole('banner')).getByRole('heading', { name: 'Dashboard' }),
-  ).toBeInTheDocument()
-  expect(
-    within(screen.getByRole('main')).getByRole('heading', {
-      name: 'Enterprise Portfolio Dashboard',
-    }),
-  ).toBeInTheDocument()
+  expect(screen.getByRole('navigation', { name: 'Public navigation' })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: 'Manage your properties in one workspace.' })).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: 'Create an organization' })).toHaveAttribute('href', '/register')
+  expect(screen.queryByRole('navigation', { name: 'Main navigation' })).not.toBeInTheDocument()
 })
 
 it('keeps the not-found page outside the shell', () => {
