@@ -25,7 +25,7 @@ export function AppShell() {
           aria-label="Main content"
           ref={contentRef}
           tabIndex={-1}
-          className="min-w-0 flex-1 overflow-x-auto p-4 sm:p-6 lg:p-8"
+          className="min-w-0 flex-1 overflow-x-auto p-4 sm:p-6 lg:px-8 lg:py-6"
         >
           <PortfolioBreadcrumbs />
           <Outlet />

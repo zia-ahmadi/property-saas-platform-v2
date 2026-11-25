@@ -133,9 +133,21 @@ describe('accessibility audit', () => {
     await user.tab()
     await user.keyboard('{Enter}')
     expect(screen.getByRole('main')).toHaveFocus()
-    expect(screen.getByRole('link', { name: 'Add property' })).toBeInTheDocument()
-    await user.tab(); await user.tab(); await user.tab(); await user.tab()
-    expect(details).toHaveFocus()
+    for (const control of [
+      screen.getByRole('link', { name: 'Add property' }),
+      screen.getByRole('button', { name: /^All properties/ }),
+      screen.getByRole('button', { name: /^Active/ }),
+      screen.getByRole('button', { name: /^Archived/ }),
+      screen.getByRole('searchbox', { name: 'Search properties' }),
+      screen.getByRole('button', { name: /^Search$/ }),
+      screen.getByRole('combobox', { name: 'Property type' }),
+      screen.getByRole('combobox', { name: 'Page size' }),
+      screen.getByRole('region', { name: /^Properties$/ }),
+      details,
+    ]) {
+      await user.tab()
+      expect(control).toHaveFocus()
+    }
     await user.keyboard('{Enter}')
     const manage = await screen.findByRole('link', { name: 'Manage Units' })
     expect(manage).toHaveAttribute('href', '/properties/prop-101/units')

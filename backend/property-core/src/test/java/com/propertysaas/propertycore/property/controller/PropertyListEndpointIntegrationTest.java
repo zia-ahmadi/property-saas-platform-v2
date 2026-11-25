@@ -154,6 +154,38 @@ class PropertyListEndpointIntegrationTest {
         }
     }
 
+    @Test
+    void filtersByAddressStatusAndTypeBeforePaginatingWithinTheOrganization() throws Exception {
+        TestFixture owner = createFixture(MembershipRole.OWNER);
+        TestFixture other = createFixture(MembershipRole.OWNER);
+        try {
+            createProperties(owner.organization(), 3);
+            createProperties(other.organization(), 1);
+            mockMvc.perform(get(ENDPOINT, owner.organization().getId())
+                            .header("Authorization", "Bearer " + owner.accessToken())
+                            .param("search", "STREET 1").param("status", "ACTIVE")
+                            .param("type", "APARTMENT").param("size", "1"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.totalElements").value(1))
+                    .andExpect(jsonPath("$.content[0].name").value("Test Property 1"));
+
+            mockMvc.perform(get(ENDPOINT, owner.organization().getId())
+                            .header("Authorization", "Bearer " + owner.accessToken())
+                            .param("search", "kabul").param("status", "ARCHIVED"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.totalElements").value(0));
+
+            mockMvc.perform(get(ENDPOINT, owner.organization().getId())
+                            .header("Authorization", "Bearer " + owner.accessToken())
+                            .param("type", "HOUSE"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.totalElements").value(0));
+        } finally {
+            cleanupFixture(owner);
+            cleanupFixture(other);
+        }
+    }
+
     // ---------------------------------------------------------
     // 4. Invalid pagination parameters
     // ---------------------------------------------------------

@@ -41,9 +41,28 @@ for (const width of [360, 768, 1440]) test(`WCAG scan and responsive workflows a
     [`/properties/${propertyId}/units/${unitId}/edit`, 'unit-edit', 'Edit unit'],
   ]) {
     await visit(page, path)
-    await expect(page.getByRole(label === 'unit-list' ? 'link' : 'heading', { name: ready, exact: true })).toBeVisible()
+    await expect(page.getByRole('main').getByRole(label.endsWith('-list') ? 'link' : 'heading', { name: ready, exact: true })).toBeVisible()
     if (label.endsWith('edit')) await expect(page.locator('form input').first()).toHaveValue(label.startsWith('property') ? 'QA property' : 'QA-101')
     await audit(label)
+    if (label === 'property-list' && width === 360) {
+      const register = page.getByRole('region', { name: 'Property register' })
+      const search = register.getByRole('searchbox', { name: 'Search properties' })
+      await search.fill('missing property')
+      await search.press('Enter')
+      await expect(register.getByRole('heading', { name: 'No matching properties' })).toBeVisible()
+      await register.getByRole('button', { name: 'Clear filters' }).click()
+      await expect(register.getByRole('link', { name: ready, exact: true })).toBeVisible()
+      await register.getByRole('combobox', { name: 'Property type' }).selectOption('APARTMENT')
+      await expect(register.getByRole('heading', { name: 'No matching properties' })).toBeVisible()
+      await register.getByRole('button', { name: 'Clear filters' }).click()
+      await register.getByRole('button', { name: /^Archived/ }).click()
+      await expect(register.getByRole('heading', { name: 'No matching properties' })).toBeVisible()
+    }
+  }
+  for (const [path, heading] of [['/leases', 'Lease register'], ['/billing', 'Invoice register'], ['/maintenance', 'Request queue'], ['/renters', 'Renter directory']]) {
+    await visit(page, path)
+    await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible()
+    await audit(path.slice(1))
   }
   await visit(page, `/properties/${propertyId}/units/${unitId}`)
   await page.getByRole('button', { name: 'Mark UNAVAILABLE' }).click()

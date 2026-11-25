@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/ui/page-header'
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Badge } from '@/components/ui/badge'
@@ -190,32 +191,15 @@ function TeamContent() {
 
   return (
     <div className="mx-auto w-full max-w-[1200px] min-w-0 space-y-7">
-      <section className="relative isolate overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 px-5 py-7 text-white shadow-lg sm:px-8 sm:py-9">
-        <div
-          aria-hidden="true"
-          className="absolute -right-10 -top-20 -z-10 size-64 rounded-full bg-indigo-400/20 blur-3xl"
-        />
-        <div className="flex flex-wrap items-end justify-between gap-5">
-          <div className="max-w-2xl space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-200">
-              People & access
-            </p>
-            <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">Your team</h2>
-            <p className="text-sm leading-6 text-slate-300 sm:text-base">
-              Invite teammates, keep roles up to date, and manage access to your organization.
-            </p>
-          </div>
-          <Button
+      <PageHeader headingLevel={2} title="Your team" description="Invite teammates and manage organization access."
+        actions={<Button
             variant="outline"
             disabled={team.isFetching}
             onClick={() => void team.refetch()}
-            className="border-white/25 bg-white/10 text-white hover:bg-white/20 hover:text-white"
           >
             <RefreshCw aria-hidden="true" className={`size-4 ${team.isFetching ? 'animate-spin' : ''}`} />
             {team.isFetching ? 'Refreshing…' : 'Refresh team'}
-          </Button>
-        </div>
-      </section>
+          </Button>} />
 
       {action.isError && (
         <p role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm">

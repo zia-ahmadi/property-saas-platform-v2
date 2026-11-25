@@ -3,6 +3,8 @@ package com.propertysaas.propertycore.property.controller;
 import com.propertysaas.propertycore.common.response.PageResponse;
 import com.propertysaas.propertycore.property.dto.CreatePropertyRequest;
 import com.propertysaas.propertycore.property.dto.PropertyResponse;
+import com.propertysaas.propertycore.property.entity.PropertyStatus;
+import com.propertysaas.propertycore.property.entity.PropertyType;
 import com.propertysaas.propertycore.property.service.PropertyService;
 
 import jakarta.validation.Valid;
@@ -71,7 +73,10 @@ public class PropertyController {
     public ResponseEntity<PageResponse<PropertyResponse>> listProperties(
             @PathVariable UUID organizationId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "") String search,
+            @RequestParam(required = false) PropertyStatus status,
+            @RequestParam(required = false) PropertyType type
     ) {
         if (page < 0 || size < 1 || size > 100) {
             throw new ResponseStatusException(
@@ -83,7 +88,7 @@ public class PropertyController {
         Page<PropertyResponse> properties = propertyService.listProperties(
                 organizationId,
                 page,
-                size
+                size, search, status, type
         );
 
         return ResponseEntity.ok(PageResponse.from(properties));

@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/ui/page-header'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router'
 import { MessageCircle, RefreshCw, Send, ShieldCheck } from 'lucide-react'
@@ -115,28 +116,8 @@ function InboxContent({ id }: { id: string }) {
 
   return (
     <div className="mx-auto w-full max-w-5xl min-w-0 space-y-6">
-      <section className="relative isolate overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 px-5 py-7 text-white shadow-lg sm:px-8 sm:py-9">
-        <div
-          aria-hidden="true"
-          className="absolute -right-10 -top-20 -z-10 size-64 rounded-full bg-indigo-400/20 blur-3xl"
-        />
-        <div className="flex flex-wrap items-end justify-between gap-5">
-          <div className="max-w-2xl space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-200">
-              Organization support
-            </p>
-            <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">Inbox</h2>
-            <p className="text-sm leading-6 text-slate-300 sm:text-base">
-              A private conversation with the platform team. Replies appear automatically while
-              this page is open.
-            </p>
-          </div>
-          <div className="flex items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1.5 text-sm text-emerald-100">
-            <span aria-hidden="true" className="size-2 rounded-full bg-emerald-300" />
-            Live updates · 3 sec
-          </div>
-        </div>
-      </section>
+      <PageHeader headingLevel={2} title="Inbox" description="A private conversation with the platform team. Replies appear while this page is open."
+        actions={<span className="rounded-md bg-accent px-2.5 py-1 text-xs font-medium text-accent-foreground">Live updates</span>} />
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
         <Card className="min-w-0 gap-0 overflow-hidden rounded-2xl p-0">

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { ArrowUpRight, Plus } from 'lucide-react'
 import { Link } from 'react-router'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -7,6 +8,11 @@ import { PageHeader } from '@/components/ui/page-header'
 import { Pagination } from '@/components/ui/pagination'
 import { useOrganization } from '@/features/organization/context'
 import { renterError, type RenterPage } from '@/features/renters/api'
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { ErrorState } from '@/components/ui/error-state'
+import { EmptyState } from '@/components/ui/empty-state'
+import { LoadingState } from '@/components/ui/loading-state'
+import { Select } from '@/components/ui/select'
 import { OrganizationImage } from '@/components/OrganizationImage'
 
 export function RentersPage() {
@@ -30,103 +36,86 @@ function RenterList() {
     retry: false,
   })
   return (
-    <div className="space-y-6">
-      <PageHeader
-        headingLevel={2}
-        title="Renter directory"
-        actions={
-          org.can('PROPERTY_MANAGE') && (
-            <Link className={buttonVariants()} to="/renters/new">
-              Add renter
-            </Link>
-          )
-        }
+    <div className="mx-auto max-w-[1440px] space-y-6">
+      <PageHeader headingLevel={2} title="Renter directory" description="Find renters and manage their contact information."
+        actions={org.can('PROPERTY_MANAGE') && (
+          <Link className={buttonVariants({ className: 'h-10 px-3' })} to="/renters/new">
+            <Plus aria-hidden="true" className="size-4" /> Add renter
+          </Link>
+        )}
       />
-      <form
-        className="flex flex-wrap items-end gap-3"
-        onSubmit={(event) => {
+      <section aria-label="Renters" className="min-w-0 rounded-xl border bg-card">
+        <form className="flex flex-wrap items-end gap-2 p-4 sm:px-5" onSubmit={event => {
           event.preventDefault()
           setSearch(draft.trim())
           setPage(0)
-        }}
-      >
-        <label className="space-y-1">
-          <span>Search renters</span>
-          <Input
-            type="search"
-            maxLength={254}
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-          />
-        </label>
-        <Button type="submit">Search</Button>
-        <label className="space-x-2">
-          <span>Page size</span>
-          <select
-            className="rounded border bg-background p-2"
-            value={size}
-            onChange={(event) => {
-              setSize(Number(event.target.value))
-              setPage(0)
-            }}
-          >
-            <option value={10}>10</option>
-            <option value={25}>25</option>
-            <option value={50}>50</option>
-          </select>
-        </label>
-      </form>
-      {query.isPending && <p role="status">Loading renters…</p>}
-      {query.isError && (
-        <div role="alert">
-          <p>{renterError(query.error)}</p>
-          <Button variant="outline" onClick={() => void query.refetch()}>
-            Retry
-          </Button>
-        </div>
-      )}
-      {query.data && (
-        <>
+        }}>
+          <label className="min-w-36 flex-1 space-y-1 text-sm font-medium">
+            <span>Search renters</span>
+            <Input type="search" placeholder="Name or email" maxLength={254} value={draft}
+              onChange={event => setDraft(event.target.value)} />
+          </label>
+          <Button variant="outline" type="submit" className="h-10">Search</Button>
+          <Select label="Page size" value={size} onChange={event => {
+            setSize(Number(event.target.value))
+            setPage(0)
+          }}>
+            {[10, 25, 50].map(value => <option key={value} value={value}>{value}</option>)}
+          </Select>
+          {search && <Button variant="ghost" type="button" className="h-10" onClick={() => {
+            setDraft('')
+            setSearch('')
+            setPage(0)
+          }}>Clear search</Button>}
+        </form>
+        {query.isPending && <div className="border-t p-4"><LoadingState label="Loading renters…" /></div>}
+        {query.isError && <div className="border-t p-4">
+          <ErrorState title="Couldn’t load renters" description={renterError(query.error)} onRetry={() => void query.refetch()} />
+        </div>}
+        {query.data && <>
           {query.data.content.length === 0 ? (
-            <p>No renters found.</p>
+            <div className="border-t p-4"><EmptyState title="No renters found."
+              description={search ? 'Try a different name or email.' : 'Add a renter to manage their contact information and leases.'} /></div>
           ) : (
-            <ul className="space-y-3">
-              {query.data.content.map((renter) => (
-                <li key={renter.id} className="rounded-xl border bg-card p-5 break-words">
-                  <OrganizationImage
-                    resourceType="renter"
-                    resourceId={renter.id}
-                    alt={`${renter.firstName} ${renter.lastName}`}
-                    className="mb-4 max-w-sm"
-                  />
-                  <h3>
-                    <Link className="font-semibold underline" to={`/renters/${renter.id}`}>
-                      {renter.firstName} {renter.lastName}
-                    </Link>
-                  </h3>
-                  {renter.email && <p>{renter.email}</p>}
-                  {renter.phone && <p>{renter.phone}</p>}
-                </li>
-              ))}
-            </ul>
+            <TableContainer aria-label="Renter directory" className="rounded-none border-x-0 border-b-0">
+              <Table>
+                <TableHeader className="text-xs text-muted-foreground"><TableRow>
+                  <TableHead>Renter</TableHead>
+                  <TableHead className="hidden sm:table-cell">Email</TableHead>
+                  <TableHead className="hidden sm:table-cell">Phone</TableHead>
+                </TableRow></TableHeader>
+                <TableBody>
+                  {query.data.content.map(renter => {
+                    const name = `${renter.firstName} ${renter.lastName}`
+                    return <TableRow key={renter.id} className="hover:bg-muted/60">
+                      <TableCell><div className="flex items-center gap-3">
+                        <OrganizationImage resourceType="renter" resourceId={renter.id} alt={name} thumbnail />
+                        <div className="min-w-0">
+                          <Link to={`/renters/${renter.id}`} className="inline-flex items-center gap-1.5 font-semibold hover:text-primary hover:underline">
+                            <span className="wrap-anywhere">{name}</span><ArrowUpRight aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
+                          </Link>
+                          {renter.email && <p className="wrap-anywhere text-xs text-muted-foreground sm:hidden">{renter.email}</p>}
+                          {renter.phone && <p className="wrap-anywhere text-xs text-muted-foreground sm:hidden">{renter.phone}</p>}
+                        </div>
+                      </div></TableCell>
+                      <TableCell className="hidden wrap-anywhere text-muted-foreground sm:table-cell">{renter.email || '—'}</TableCell>
+                      <TableCell className="hidden wrap-anywhere text-muted-foreground sm:table-cell">{renter.phone || '—'}</TableCell>
+                    </TableRow>
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
           )}
-          <p role="status">{query.data.totalElements} renters</p>
-          {page >= query.data.totalPages && page > 0 ? (
-            <Button
-              variant="outline"
-              onClick={() => setPage(Math.max(0, query.data!.totalPages - 1))}
-            >
-              Back to results
-            </Button>
-          ) : (
-            <Pagination
-              page={page + 1}
-              totalPages={query.data.totalPages}
-              onPageChange={(next) => setPage(next - 1)}
-            />
-          )}
-        </>
-      )}
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t px-4 py-2.5 sm:px-5">
+            <p role="status" className="text-sm text-muted-foreground">{query.data.totalElements} renters</p>
+            {page >= query.data.totalPages && page > 0 ? (
+              <Button variant="outline" onClick={() => setPage(0)}>Back to results</Button>
+            ) : (
+              <Pagination page={page + 1} totalPages={query.data.totalPages} onPageChange={next => setPage(next - 1)} />
+            )}
+          </div>
+        </>}
+      </section>
     </div>
   )
 }

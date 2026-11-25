@@ -74,7 +74,7 @@ export function AppNavigation({ label = 'Main navigation', onNavigate }: AppNavi
   const platformWorkspace = pathname === '/platform' || pathname.startsWith('/platform/')
   const available = destinations.filter(item => !('permission' in item) || !item.permission || (organization?.can(item.permission) ?? false))
   return (
-    <nav aria-label={label} className="flex flex-col gap-5 p-4">
+    <nav aria-label={label} className="flex flex-col gap-4 px-3 pb-4">
       {platformWorkspace ? (
         <NavLink
           to="/platform"
@@ -99,7 +99,7 @@ export function AppNavigation({ label = 'Main navigation', onNavigate }: AppNavi
                     to={to}
                     onClick={onNavigate}
                     className={({ isActive }) =>
-                      `flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors motion-reduce:transition-none ${
+                      `flex min-h-10 items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors motion-reduce:transition-none ${
                         isActive
                           ? 'bg-sidebar-accent font-semibold text-sidebar-accent-foreground'
                           : 'font-medium text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'

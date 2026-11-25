@@ -45,7 +45,7 @@ test('manager creates, edits, activates and ends a lease with occupancy updates'
   await page.getByRole('link', { name: 'Back to leasing' }).click()
   await page.getByRole('combobox', { name: 'Status' }).selectOption('ENDING_SOON')
   const item = page.getByRole('link', { name: /Ada Hassan/ })
-  await expect(item).toContainText('Active')
+  await expect(page.getByRole('row').filter({ has: item })).toContainText('Active')
   await item.click()
   await page.getByRole('button', { name: 'End lease' }).click()
   await page.getByRole('dialog', { name: 'End this lease?' }).getByRole('button', { name: 'End lease' }).click()

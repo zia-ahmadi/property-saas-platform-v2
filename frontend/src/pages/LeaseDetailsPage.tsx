@@ -95,8 +95,8 @@ function LeaseScreen({ leaseId, mode }: { leaseId?: string; mode: 'detail' | 'ne
           }} />
         ) : lease && (
           <article className="overflow-hidden rounded-2xl border bg-card shadow-sm">
-            <header className="flex items-start gap-4 border-b bg-linear-to-br from-violet-500/15 to-transparent p-5 sm:p-7">
-              <KeyRound aria-hidden="true" className="size-12 shrink-0 rounded-xl bg-violet-500/15 p-3 text-violet-800 dark:text-violet-200" />
+            <header className="flex items-start gap-4 border-b bg-accent/50 p-5 sm:p-7">
+              <KeyRound aria-hidden="true" className="size-12 shrink-0 rounded-xl bg-accent p-3 text-accent-foreground" />
               <div className="min-w-0 space-y-1">
                 <LeaseStatus status={lease.status} />
                 <h2 className="wrap-anywhere text-2xl font-semibold tracking-tight">{lease.renterName}</h2>
@@ -198,8 +198,8 @@ function LeaseForm({ lease, onSaved }: { lease?: Lease; onSaved: (lease: Lease) 
 
   return (
     <article className="overflow-hidden rounded-2xl border bg-card shadow-sm">
-      <header className="flex items-start gap-4 border-b bg-linear-to-br from-violet-500/15 to-transparent p-5 sm:p-7">
-        <FileText aria-hidden="true" className="size-12 shrink-0 rounded-xl bg-violet-500/15 p-3 text-violet-800 dark:text-violet-200" />
+      <header className="flex items-start gap-4 border-b bg-accent/50 p-5 sm:p-7">
+        <FileText aria-hidden="true" className="size-12 shrink-0 rounded-xl bg-accent p-3 text-accent-foreground" />
         <div className="space-y-1">
           <h2 className="text-2xl font-semibold tracking-tight">{lease ? 'Edit draft lease' : 'New lease'}</h2>
           <p className="text-sm text-muted-foreground">Choose a renter and unit, then record the agreement terms.</p>

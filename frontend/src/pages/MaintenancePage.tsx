@@ -1,8 +1,10 @@
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useQuery } from '@tanstack/react-query'
-import { AlertTriangle, ArrowUpRight, CalendarDays, CheckCircle2, ClipboardList, MapPin, Plus, Timer, Wrench } from 'lucide-react'
+import { AlertTriangle, ArrowUpRight, CalendarDays, CheckCircle2, ClipboardList, Plus, Timer } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router'
 import { buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { PageHeader } from '@/components/ui/page-header'
 import { Pagination } from '@/components/ui/pagination'
 import { LoadingState } from '@/components/ui/loading-state'
 import { ErrorState } from '@/components/ui/error-state'
@@ -11,7 +13,7 @@ import { Select } from '@/components/ui/select'
 import { useOrganization } from '@/features/organization/context'
 import type { Property } from '@/features/properties/api'
 import { categories, formatDate, isOverdue, maintenancePropertyId, priorities, statuses } from '@/features/maintenance/api'
-import type { MaintenancePageData, MaintenanceSummary } from '@/features/maintenance/api'
+import type { MaintenancePageData, MaintenanceRequest, MaintenanceSummary } from '@/features/maintenance/api'
 
 const metrics = [
   { key: 'open', label: 'Open', icon: ClipboardList, color: 'bg-sky-500/10 text-sky-700 dark:text-sky-300' },
@@ -79,24 +81,17 @@ function MaintenanceQueue() {
 
   return (
     <div className="mx-auto max-w-[1440px] space-y-6">
-      <section className="relative isolate flex flex-wrap items-end justify-between gap-5 overflow-hidden rounded-3xl bg-linear-to-br from-slate-950 via-slate-900 to-teal-950 p-6 text-white shadow-lg sm:p-9">
-        <div aria-hidden="true" className="absolute -right-10 -top-28 -z-10 size-80 rounded-full bg-teal-400/20 blur-3xl" />
-        <div className="space-y-3">
-          <Wrench aria-hidden="true" className="size-11 rounded-xl border border-white/20 bg-white/10 p-2.5 text-teal-200" />
-          <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">Maintenance</h2>
-          <p className="text-sm text-slate-300 sm:text-base">Track repairs and service requests across your properties.</p>
-        </div>
-        <Link to={createLink} className={buttonVariants({ className: 'bg-teal-200 text-slate-950 hover:bg-teal-100' })}>
+      <PageHeader headingLevel={2} title="Maintenance" description="Track repairs and service requests across your properties."
+        actions={<Link to={createLink} className={buttonVariants({ className: 'h-10 px-3' })}>
           <Plus aria-hidden="true" className="size-4" /> New request
-        </Link>
-      </section>
+        </Link>} />
 
       {summary.isError ? (
         <ErrorState title="Summary unavailable" onRetry={() => void summary.refetch()} retrying={summary.isFetching} />
       ) : (
         <dl aria-label="Maintenance summary" aria-busy={summary.isPending} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {metrics.map(({ key, label, icon: Icon, color }) => (
-            <div key={key} className="rounded-2xl border bg-card p-3 shadow-xs sm:p-5">
+            <div key={key} className="rounded-xl border bg-card p-3 sm:p-4">
               <dt className="flex flex-wrap items-center gap-2 text-sm font-medium text-muted-foreground">
                 <Icon aria-hidden="true" className={`size-8 rounded-lg p-1.5 ${color}`} /> {label}
               </dt>
@@ -106,7 +101,7 @@ function MaintenanceQueue() {
         </dl>
       )}
 
-      <section aria-label="Request queue" className="space-y-4 rounded-2xl border bg-card p-4 shadow-xs sm:p-6">
+      <section aria-label="Request queue" className="space-y-4 rounded-xl border bg-card p-4 sm:p-5">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h3 className="text-xl font-semibold">{propertyId ? `Requests for ${property.data?.name ?? 'selected property'}` : 'Request queue'}</h3>
           {query.data && <p role="status" className="text-sm text-muted-foreground">{query.data.totalElements} {query.data.totalElements === 1 ? 'request' : 'requests'}</p>}
@@ -129,38 +124,41 @@ function MaintenanceQueue() {
         {query.isPending && <LoadingState label="Loading requests…" />}
         {query.isError && <ErrorState title="Couldn’t load requests" onRetry={() => void query.refetch()} retrying={query.isFetching} />}
         {query.data && (query.data.content.length ? (
-          <ul className="divide-y rounded-xl border">
-            {query.data.content.map(request => (
-              <li key={request.id}>
-                <Link to={`/maintenance/${request.id}${suffix}`} className="grid gap-3 rounded-lg p-4 transition-colors hover:bg-muted/60 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
-                  <div className="min-w-0 space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground">{categories[request.category]}</p>
-                    <p className="wrap-break-word font-semibold">{request.title}</p>
-                    <p className="flex items-start gap-1.5 text-sm text-muted-foreground">
-                      <MapPin aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-                      <span className="wrap-anywhere">{request.propertyName}{request.unitNumber && ` · Unit ${request.unitNumber}`}</span>
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2 text-xs font-semibold sm:justify-end">
-                    <span className={`rounded-full px-2.5 py-1 ${statusColors[request.status]}`}>{statuses[request.status]}</span>
-                    <span className={`rounded-full px-2.5 py-1 ${request.priority === 'URGENT' ? metrics[2].color : 'bg-muted text-foreground'}`}>{priorities[request.priority]} priority</span>
-                  </div>
-                  <div className="flex items-center justify-between gap-4 text-sm text-muted-foreground sm:min-w-36 sm:justify-end">
-                    <div className="min-w-0 sm:max-w-40 sm:text-right">
+          <TableContainer aria-label="Maintenance requests">
+            <Table>
+              <TableHeader className="text-xs text-muted-foreground">
+                <TableRow>
+                  <TableHead>Request and location</TableHead>
+                  <TableHead>Status and priority</TableHead>
+                  <TableHead className="hidden md:table-cell">Assignment</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {query.data.content.map(request => (
+                  <TableRow key={request.id} className="hover:bg-muted/60">
+                    <TableCell>
+                      <Link to={`/maintenance/${request.id}${suffix}`} className="inline-flex items-center gap-1.5 font-semibold hover:text-primary hover:underline">
+                        <span className="wrap-anywhere">{request.title}</span><ArrowUpRight aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
+                      </Link>
+                      <p className="wrap-anywhere text-xs text-muted-foreground">{request.propertyName}{request.unitNumber && ` · Unit ${request.unitNumber}`} · {categories[request.category]}</p>
+                      <p className="mt-1 wrap-anywhere text-xs text-muted-foreground md:hidden">{request.assignedTo ?? 'Unassigned'}</p>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1.5 text-xs font-medium">
+                        <span className={`rounded-md px-2 py-1 ${statusColors[request.status]}`}>{statuses[request.status]}</span>
+                        <span className={`rounded-md px-2 py-1 ${request.priority === 'URGENT' ? metrics[2].color : 'bg-muted text-foreground'}`}>{priorities[request.priority]} priority</span>
+                      </div>
+                      {request.dueDate && <DueDate request={request} className="md:hidden" />}
+                    </TableCell>
+                    <TableCell className="hidden min-w-28 md:table-cell">
                       <p className="wrap-anywhere">{request.assignedTo ?? 'Unassigned'}</p>
-                      {request.dueDate && (
-                        <p className={`flex items-center gap-1 text-xs sm:justify-end ${isOverdue(request) ? 'font-semibold text-destructive' : ''}`}>
-                          <CalendarDays aria-hidden="true" className="size-3" />
-                          {isOverdue(request) ? 'Overdue · ' : 'Due '}{formatDate(request.dueDate)}
-                        </p>
-                      )}
-                    </div>
-                    <ArrowUpRight aria-hidden="true" className="size-4 shrink-0" />
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
+                      {request.dueDate && <DueDate request={request} />}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
         ) : (
           <EmptyState title={page ? 'No requests on this page' : filtered ? 'No matching requests' : 'No maintenance requests yet'}
             description={page ? 'Return to the first page to see current results.' : filtered ? 'Adjust your filters to see more requests.' : 'Log a repair or service request to start tracking work.'}
@@ -172,4 +170,12 @@ function MaintenanceQueue() {
       </section>
     </div>
   )
+}
+
+function DueDate({ request, className = '' }: { request: MaintenanceRequest; className?: string }) {
+  const overdue = isOverdue(request)
+  return <p className={`mt-1 flex items-center gap-1 text-xs ${overdue ? 'font-semibold text-destructive' : 'text-muted-foreground'} ${className}`}>
+    <CalendarDays aria-hidden="true" className="size-3 shrink-0" />
+    {overdue ? 'Overdue · ' : 'Due '}{request.dueDate && formatDate(request.dueDate)}
+  </p>
 }

@@ -1,3 +1,4 @@
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowUpRight, CalendarClock, FileCheck2, FileText, KeyRound, Plus } from 'lucide-react'
@@ -7,6 +8,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { ErrorState } from '@/components/ui/error-state'
 import { Input } from '@/components/ui/input'
 import { LoadingState } from '@/components/ui/loading-state'
+import { PageHeader } from '@/components/ui/page-header'
 import { Pagination } from '@/components/ui/pagination'
 import { Select } from '@/components/ui/select'
 import { useOrganization } from '@/features/organization/context'
@@ -47,21 +49,14 @@ function LeaseRegister() {
 
   return (
     <div className="mx-auto max-w-[1440px] space-y-6">
-      <section className="relative isolate flex flex-wrap items-end justify-between gap-5 overflow-hidden rounded-3xl bg-linear-to-br from-slate-950 via-indigo-950 to-violet-950 p-6 text-white shadow-lg sm:p-9">
-        <div aria-hidden="true" className="absolute -right-12 -top-20 -z-10 size-72 rounded-full bg-violet-400/25 blur-3xl" />
-        <div className="space-y-3">
-          <KeyRound aria-hidden="true" className="size-11 rounded-xl border border-white/20 bg-white/10 p-2.5 text-violet-200" />
-          <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">Leasing</h2>
-          <p className="text-sm leading-6 text-slate-200 sm:text-base">Manage lease terms, move-ins, and upcoming end dates.</p>
-        </div>
-        <Link to="/leases/new" className={buttonVariants({ className: 'bg-violet-200 text-slate-950 hover:bg-violet-100' })}>
+      <PageHeader headingLevel={2} title="Leasing" description="Manage lease terms, move-ins, and upcoming end dates."
+        actions={<Link to="/leases/new" className={buttonVariants({ className: 'h-10 px-3' })}>
           <Plus aria-hidden="true" className="size-4" /> New lease
-        </Link>
-      </section>
+        </Link>} />
       {summary.isError ? <ErrorState title="Couldn’t load lease totals" onRetry={() => void summary.refetch()} /> :
         <dl aria-label="Lease summary" aria-busy={summary.isPending} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {metrics.map(({ key, label, icon: Icon, tone }) => (
-            <div key={key} className="rounded-2xl border bg-card p-3 shadow-xs sm:p-5">
+            <div key={key} className="rounded-xl border bg-card p-3 sm:p-4">
               <dt className="flex items-start gap-2 text-sm font-medium text-muted-foreground">
                 <Icon aria-hidden="true" className={`size-8 shrink-0 rounded-lg p-1.5 ${tone}`} />
                 <span className="self-center">{label}</span>
@@ -70,7 +65,7 @@ function LeaseRegister() {
             </div>
           ))}
         </dl>}
-      <section aria-label="Lease register" className="space-y-4 rounded-2xl border bg-card p-4 shadow-xs sm:p-6">
+      <section aria-label="Lease register" className="space-y-4 rounded-xl border bg-card p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-xl font-semibold">Lease register</h3>
           {list.data && <p role="status" className="text-sm text-muted-foreground">{list.data.totalElements} {list.data.totalElements === 1 ? 'lease' : 'leases'}</p>}
@@ -96,32 +91,40 @@ function LeaseRegister() {
         {list.isPending && <LoadingState label="Loading leases…" />}
         {list.isError && <ErrorState title="Couldn’t load leases" onRetry={() => void list.refetch()} retrying={list.isFetching} />}
         {list.data && (list.data.content.length ? (
-          <ul className="divide-y rounded-xl border">
-            {list.data.content.map(lease => {
-              const overdue = lease.status === 'ACTIVE' && lease.endsOn && summary.data && lease.endsOn < summary.data.asOf
-              return (
-                <li key={lease.id}>
-                  <Link to={`/leases/${lease.id}`} className="grid gap-3 rounded-lg p-4 transition-colors hover:bg-muted/60 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
-                    <div className="min-w-0">
-                      <p className="wrap-anywhere font-semibold">{lease.renterName}</p>
-                      <p className="wrap-anywhere text-sm text-muted-foreground">{lease.propertyName} · Unit {lease.unitNumber}</p>
-                    </div>
-                    <div className="space-y-1">
+          <TableContainer aria-label="Leases">
+            <Table>
+              <TableHeader className="text-xs text-muted-foreground">
+                <TableRow>
+                  <TableHead>Renter and unit</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="hidden lg:table-cell">Lease term</TableHead>
+                  <TableHead className="hidden text-right sm:table-cell">Monthly rent</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {list.data.content.map(lease => {
+                  const overdue = lease.status === 'ACTIVE' && lease.endsOn && summary.data && lease.endsOn < summary.data.asOf
+                  const term = `${leaseDate(lease.startsOn)} – ${lease.endsOn ? leaseDate(lease.endsOn) : 'Open-ended'}`
+                  return <TableRow key={lease.id} className="hover:bg-muted/60">
+                    <TableCell>
+                      <Link to={`/leases/${lease.id}`} className="inline-flex items-center gap-1.5 font-semibold hover:text-primary hover:underline">
+                        <span className="wrap-anywhere">{lease.renterName}</span><ArrowUpRight aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
+                      </Link>
+                      <p className="wrap-anywhere text-xs text-muted-foreground">{lease.propertyName} · Unit {lease.unitNumber}</p>
+                      <p className="mt-1 text-xs text-muted-foreground lg:hidden">{term}</p>
+                    </TableCell>
+                    <TableCell>
                       <LeaseStatus status={lease.status} />
-                      <p className={`text-xs ${overdue ? 'font-semibold text-destructive' : 'text-muted-foreground'}`}>
-                        {leaseDate(lease.startsOn)} – {lease.endsOn ? leaseDate(lease.endsOn) : 'Open-ended'}
-                        {overdue && ' · Past end date'}
-                      </p>
-                    </div>
-                    <div className="flex items-center justify-between gap-3 text-sm sm:justify-end">
-                      <span className="font-medium tabular-nums">{leaseMoney(lease.monthlyRent, lease.currency)}<span className="text-muted-foreground"> / mo</span></span>
-                      <ArrowUpRight aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
-                    </div>
-                  </Link>
-                </li>
-              )
-            })}
-          </ul>
+                      {overdue && <p className="mt-1 text-xs font-medium text-destructive">Past end date</p>}
+                      <p className="mt-1 text-xs tabular-nums text-muted-foreground sm:hidden">{leaseMoney(lease.monthlyRent, lease.currency)}</p>
+                    </TableCell>
+                    <TableCell className="hidden text-muted-foreground lg:table-cell">{term}</TableCell>
+                    <TableCell className="hidden text-right font-medium whitespace-nowrap tabular-nums sm:table-cell">{leaseMoney(lease.monthlyRent, lease.currency)}</TableCell>
+                  </TableRow>
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
         ) : <EmptyState title={page ? 'No leases on this page' : filtered ? 'No matching leases' : 'No leases yet'}
           description={page ? 'Return to the first page for current results.' : filtered ? 'Try a different search or status.' : 'Create a draft by choosing a renter, a unit, and the lease terms.'}
           action={page ? <Button variant="outline" onClick={() => setPage(0)}>First page</Button> : undefined} />)}

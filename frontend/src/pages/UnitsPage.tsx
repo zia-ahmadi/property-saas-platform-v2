@@ -355,9 +355,8 @@ function UnitWorkspace({
                           <Link
                             className="inline-flex min-h-9 items-center gap-1 text-sm font-medium text-primary"
                             to={`${route}/${unit.id}`}
-                            aria-label={`View unit ${unit.unitNumber}`}
                           >
-                            View details <ArrowRight aria-hidden="true" className="size-4" />
+                            View details<span className="sr-only"> for unit {unit.unitNumber}</span> <ArrowRight aria-hidden="true" className="size-4" />
                           </Link>
                         </Card>
                       </li>

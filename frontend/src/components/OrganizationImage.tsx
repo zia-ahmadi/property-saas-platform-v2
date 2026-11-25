@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ImagePlus, Trash2, Upload } from 'lucide-react'
+import { Building2, ImagePlus, Trash2, Upload, UserRound } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useOrganization } from '@/features/organization/context'
 import { ApiError } from '@/lib/api/errors'
@@ -23,6 +23,7 @@ export function OrganizationImage({
   canManage = false,
   editable = true,
   className = '',
+  thumbnail = false,
 }: {
   resourceType: ImageResource
   resourceId: string
@@ -30,6 +31,7 @@ export function OrganizationImage({
   canManage?: boolean
   editable?: boolean
   className?: string
+  thumbnail?: boolean
 }) {
   const org = useOrganization()
   const client = useQueryClient()
@@ -56,7 +58,7 @@ export function OrganizationImage({
     const url = URL.createObjectURL(imageBlob)
     if (imageElement.current) imageElement.current.src = url
     return () => URL.revokeObjectURL(url)
-  }, [imageBlob])
+  }, [imageBlob, thumbnail])
 
   const upload = useMutation({
     mutationFn: (file: File) => {
@@ -94,6 +96,13 @@ export function OrganizationImage({
     }
     setUploadError('')
     upload.mutate(file)
+  }
+
+  if (thumbnail) {
+    const Icon = resourceType === 'renter' ? UserRound : Building2
+    return <span className={`size-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-accent text-primary ${className || 'inline-flex'}`} aria-hidden="true">
+      {imageBlob ? <img ref={imageElement} alt="" className="size-full object-cover" /> : <Icon className="size-4" />}
+    </span>
   }
 
   const saving = upload.isPending || remove.isPending

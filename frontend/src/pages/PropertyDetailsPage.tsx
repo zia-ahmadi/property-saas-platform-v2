@@ -94,28 +94,17 @@ export function PropertyDetailsPage() {
       )}
       {property && (
         <>
-          <OrganizationImage
-            resourceType="property"
-            resourceId={property.id}
-            alt={`${property.name} property`}
-            canManage={org.can('PROPERTY_MANAGE')}
-            editable={property.status === 'ACTIVE'}
-          />
-          <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 p-5 text-white shadow-lg sm:p-8">
-            <div
-              aria-hidden="true"
-              className="absolute -right-10 -top-20 size-64 rounded-full bg-indigo-400/20 blur-3xl"
-            />
+          <section className="rounded-xl border bg-card p-4 sm:p-6">
             <div className="relative flex flex-wrap items-start justify-between gap-5">
               <div className="flex min-w-0 items-start gap-4">
-                <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/15">
+                <span className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-accent text-primary">
                   <Building2 aria-hidden="true" className="size-7" />
                 </span>
                 <div className="min-w-0 space-y-2">
                   <h3 className="wrap-anywhere text-2xl font-semibold tracking-tight sm:text-3xl">
                     {property.name}
                   </h3>
-                  <p className="flex items-start gap-2 text-sm text-slate-300">
+                  <p className="flex items-start gap-2 text-sm text-muted-foreground">
                     <MapPin aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
                     <span className="wrap-anywhere">
                       {property.addressLine1}
@@ -129,8 +118,8 @@ export function PropertyDetailsPage() {
                 variant="secondary"
                 className={
                   property.status === 'ACTIVE'
-                    ? 'bg-emerald-400/15 text-emerald-100'
-                    : 'bg-white/10 text-slate-200'
+                    ? 'bg-accent text-accent-foreground'
+                    : 'bg-muted text-muted-foreground'
                 }
               >
                 {property.status === 'ACTIVE' ? 'Active' : 'Archived'}
@@ -223,6 +212,16 @@ export function PropertyDetailsPage() {
               )}
             </Card>
           </div>
+          <Card className="max-w-xl">
+            <h3 className="text-lg font-semibold">Property photo</h3>
+            <OrganizationImage
+              resourceType="property"
+              resourceId={property.id}
+              alt={`${property.name} property`}
+              canManage={org.can('PROPERTY_MANAGE')}
+              editable={property.status === 'ACTIVE'}
+            />
+          </Card>
         </>
       )}
     </div>

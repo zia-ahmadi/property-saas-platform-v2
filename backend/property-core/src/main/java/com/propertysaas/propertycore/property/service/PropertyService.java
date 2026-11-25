@@ -11,6 +11,8 @@ import com.propertysaas.propertycore.property.dto.CreatePropertyRequest;
 import com.propertysaas.propertycore.property.dto.PropertyResponse;
 import com.propertysaas.propertycore.property.dto.UpdatePropertyRequest;
 import com.propertysaas.propertycore.property.entity.Property;
+import com.propertysaas.propertycore.property.entity.PropertyStatus;
+import com.propertysaas.propertycore.property.entity.PropertyType;
 import com.propertysaas.propertycore.property.repository.PropertyRepository;
 import com.propertysaas.propertycore.property.validation.UpdatePropertyRequestValidator;
 
@@ -96,7 +98,17 @@ public class PropertyService {
             int page,
             int size
     ) {
+        return listProperties(organizationId, page, size, "", null, null);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<PropertyResponse> listProperties(UUID organizationId, int page, int size, String search,
+                                                 PropertyStatus status, PropertyType type) {
         contextResolver.resolve(organizationId);
+        if (search.length() > 150 || search.indexOf(0) >= 0) {
+            throw new IllegalArgumentException("Use valid search text up to 150 characters.");
+        }
+        String term = search.strip();
 
         if (page < 0 || size < 1 || size > 100) {
             throw new IllegalArgumentException(
@@ -113,11 +125,9 @@ public class PropertyService {
                 )
         );
 
-        Page<Property> properties =
-                propertyRepository.findAllByOrganizationId(
-                        organizationId,
-                        pageable
-                );
+        Page<Property> properties = term.isEmpty() && status == null && type == null
+                ? propertyRepository.findAllByOrganizationId(organizationId, pageable)
+                : propertyRepository.search(organizationId, term, status, type, pageable);
 
         return properties.map(this::toPropertyResponse);
     }

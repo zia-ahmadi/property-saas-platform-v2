@@ -1,12 +1,14 @@
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowUpRight, CalendarClock, CircleCheck, FileText, Plus, Receipt } from 'lucide-react'
+import { ArrowUpRight, CalendarClock, CircleCheck, FileText, Plus } from 'lucide-react'
 import { Link } from 'react-router'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import { ErrorState } from '@/components/ui/error-state'
 import { Input } from '@/components/ui/input'
 import { LoadingState } from '@/components/ui/loading-state'
+import { PageHeader } from '@/components/ui/page-header'
 import { Pagination } from '@/components/ui/pagination'
 import { Select } from '@/components/ui/select'
 import { useOrganization } from '@/features/organization/context'
@@ -43,23 +45,17 @@ function InvoiceRegister() {
 
   return (
     <div className="mx-auto max-w-[1440px] space-y-6">
-      <section className="flex flex-wrap items-end justify-between gap-5 rounded-3xl bg-linear-to-br from-slate-950 via-slate-900 to-teal-950 p-6 text-white shadow-lg sm:p-9">
-        <div className="space-y-3">
-          <Receipt aria-hidden="true" className="size-11 rounded-xl border border-white/20 bg-white/10 p-2.5 text-teal-200" />
-          <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">Rent billing</h2>
-          <p className="text-sm text-slate-200 sm:text-base">Issue rent invoices, track balances, and record payments.</p>
-        </div>
-        <Link to="/billing/new" className={buttonVariants({ className: 'bg-teal-200 text-slate-950 hover:bg-teal-100' })}>
+      <PageHeader headingLevel={2} title="Rent billing" description="Issue rent invoices, track balances, and record payments."
+        actions={<Link to="/billing/new" className={buttonVariants({ className: 'h-10 px-3' })}>
           <Plus aria-hidden="true" className="size-4" /> Issue invoice
-        </Link>
-      </section>
+        </Link>} />
 
       {summary.isPending && <LoadingState label="Loading billing totals…" />}
       {summary.isError && <ErrorState title="Couldn’t load billing totals" onRetry={() => void summary.refetch()} />}
       {summary.data && <>
         <dl aria-label="Invoice counts" className="grid gap-3 sm:grid-cols-3">
           {metrics.map(({ key, label, icon: Icon }) => (
-            <div key={key} className="rounded-2xl border bg-card p-4 shadow-xs sm:p-5">
+            <div key={key} className="rounded-xl border bg-card p-3 sm:p-4">
               <dt className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                 <Icon aria-hidden="true" className="size-8 shrink-0 rounded-lg bg-teal-500/10 p-1.5 text-teal-800 dark:text-teal-200" />
                 {label}
@@ -69,7 +65,7 @@ function InvoiceRegister() {
           ))}
         </dl>
         {summary.data.totals.length > 0 && (
-          <section className="rounded-2xl border bg-card p-4 shadow-xs sm:p-6">
+          <section className="rounded-xl border bg-card p-4 sm:p-5">
             <h3 className="text-lg font-semibold">Balances by currency</h3>
             <div className="mt-3 divide-y">
               {summary.data.totals.map(totals => (
@@ -88,7 +84,7 @@ function InvoiceRegister() {
         )}
       </>}
 
-      <section aria-labelledby="invoice-register" className="space-y-4 rounded-2xl border bg-card p-4 shadow-xs sm:p-6">
+      <section aria-labelledby="invoice-register" className="space-y-4 rounded-xl border bg-card p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 id="invoice-register" className="text-xl font-semibold">Invoice register</h3>
           {invoices.data && <p role="status" className="text-sm text-muted-foreground">{invoices.data.totalElements} invoices</p>}
@@ -107,29 +103,41 @@ function InvoiceRegister() {
         {invoices.isPending && <LoadingState label="Loading invoices…" />}
         {invoices.isError && <ErrorState title="Couldn’t load invoices" onRetry={() => void invoices.refetch()} />}
         {invoices.data && (invoices.data.content.length ? (
-          <ul className="divide-y rounded-xl border">
-            {invoices.data.content.map(invoice => (
-              <li key={invoice.id}>
-                <Link to={`/billing/${invoice.id}`} className="grid gap-3 rounded-lg p-4 hover:bg-muted/60 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-center">
-                  <div className="min-w-0">
-                    <p className="wrap-anywhere font-semibold">INV-{invoice.invoiceNumber} · {invoice.renterName}</p>
-                    <p className="wrap-anywhere text-sm text-muted-foreground">{invoice.propertyName} · Unit {invoice.unitNumber}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <InvoiceStatusBadge status={invoice.status} />
-                    <p className="text-xs text-muted-foreground">{invoiceMonth(invoice.billingMonth)} · Due {leaseDate(invoice.dueOn)}</p>
-                  </div>
-                  <div className="flex items-center justify-between gap-3 sm:text-right">
-                    <div>
-                      <p className="font-semibold tabular-nums">{leaseMoney(invoice.balance, invoice.currency)}</p>
-                      <p className="text-xs text-muted-foreground">Balance due</p>
-                    </div>
-                    <ArrowUpRight aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <TableContainer aria-label="Invoices">
+            <Table>
+              <TableHeader className="text-xs text-muted-foreground">
+                <TableRow>
+                  <TableHead>Invoice and renter</TableHead>
+                  <TableHead className="hidden md:table-cell">Due date</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="hidden text-right sm:table-cell">Balance due</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {invoices.data.content.map(invoice => (
+                  <TableRow key={invoice.id} className="hover:bg-muted/60">
+                    <TableCell>
+                      <Link to={`/billing/${invoice.id}`} className="inline-flex items-center gap-1.5 font-semibold hover:text-primary hover:underline">
+                        <span className="wrap-anywhere">INV-{invoice.invoiceNumber} · {invoice.renterName}</span>
+                        <ArrowUpRight aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
+                      </Link>
+                      <p className="wrap-anywhere text-xs text-muted-foreground">{invoice.propertyName} · Unit {invoice.unitNumber}</p>
+                      <p className="mt-1 text-xs text-muted-foreground md:hidden">Due {leaseDate(invoice.dueOn)}</p>
+                    </TableCell>
+                    <TableCell className="hidden whitespace-nowrap md:table-cell">
+                      {leaseDate(invoice.dueOn)}
+                      <p className="text-xs text-muted-foreground">{invoiceMonth(invoice.billingMonth)}</p>
+                    </TableCell>
+                    <TableCell>
+                      <InvoiceStatusBadge status={invoice.status} />
+                      <p className="mt-1 text-xs tabular-nums text-muted-foreground sm:hidden">{leaseMoney(invoice.balance, invoice.currency)} due</p>
+                    </TableCell>
+                    <TableCell className="hidden text-right font-medium whitespace-nowrap tabular-nums sm:table-cell">{leaseMoney(invoice.balance, invoice.currency)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
         ) : <EmptyState title={page ? 'No invoices on this page' : search || status ? 'No matching invoices' : 'No invoices to show'}
           description={page ? 'Return to the first page for current results.' : search || status ? 'Try a different search or status.' : 'Issue a rent invoice from an active or ended lease.'}
           action={page > 0 ? <Button variant="outline" onClick={() => setPage(0)}>First page</Button> : undefined} />)}
