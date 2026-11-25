@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
+import { useOptionalAuth } from '@/features/auth/context'
+import { graphqlQuery } from '@/features/notifications/api'
 import { useOrganization } from '@/features/organization/context'
 import { dashboardSummary, dashboardError, type DashboardSummary } from '@/features/dashboard/api'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -11,13 +13,27 @@ import { EmptyState } from '@/components/ui/empty-state'
 
 export function DashboardPage() {
   const org = useOrganization()
+  const auth = useOptionalAuth()
+  const organizationId = org.current?.organizationId
   const permitted = !!org.current && !org.forbidden && org.can('PROPERTY_VIEW')
   const query = useQuery({
     queryKey: org.queryKey(['dashboard', 'summary']),
-    queryFn: async ({ signal }) =>
-      dashboardSummary(
-        await org.request<DashboardSummary>('get', 'dashboard/summary', undefined, { signal }),
-      ),
+    queryFn: async ({ signal }) => {
+      if (auth && organizationId) {
+        try {
+          const result = await graphqlQuery<{ portfolioDashboard: DashboardSummary }>(auth.service,
+            `query PortfolioDashboard($organizationId: ID!) {
+              portfolioDashboard(organizationId: $organizationId) {
+                totalProperties activeProperties archivedProperties totalUnits availableUnits unavailableUnits occupiedUnits
+              }
+            }`, { organizationId }, signal)
+          return dashboardSummary(result.portfolioDashboard)
+        } catch {
+          signal.throwIfAborted()
+        }
+      }
+      return dashboardSummary(await org.request<DashboardSummary>('get', 'dashboard/summary', undefined, { signal }))
+    },
     enabled: permitted,
     retry: false,
     staleTime: 30_000,

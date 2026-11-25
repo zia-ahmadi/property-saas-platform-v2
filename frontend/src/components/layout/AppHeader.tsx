@@ -5,6 +5,7 @@ import { useOptionalAuth } from '@/features/auth/context'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useOptionalOrganization } from '@/features/organization/context'
+import { NotificationBell } from '@/features/notifications/NotificationBell'
 import { OrganizationStatus } from '@/features/organization/OrganizationStatus'
 
 export function AppHeader() {
@@ -14,7 +15,7 @@ export function AppHeader() {
   const platformAccess = usePlatformAccess()
   const platformWorkspace = pathname === '/platform' || pathname.startsWith('/platform/')
   const [warning, setWarning] = useState(false)
-  const title = platformWorkspace
+  const title = pathname === '/notifications' ? 'Notifications' : platformWorkspace
     ? 'Platform workspace'
     : matchPath('/renters/*', pathname)
       ? 'Renters'
@@ -75,6 +76,7 @@ export function AppHeader() {
             <span className="text-sm">No active organization</span>
           ))}
         {warning && <span role="alert">Server logout could not be confirmed.</span>}
+        {auth?.state.status === 'authenticated' && <NotificationBell />}
         {auth && (
           <Button
             variant="outline"

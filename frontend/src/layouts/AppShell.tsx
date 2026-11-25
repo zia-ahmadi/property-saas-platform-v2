@@ -3,13 +3,14 @@ import { PortfolioBreadcrumbs } from '@/components/layout/PortfolioBreadcrumbs'
 import { Outlet } from 'react-router'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { AppSidebar } from '@/components/layout/AppSidebar'
+import { NotificationFeedProvider } from '@/features/notifications/NotificationFeedProvider'
 import { PlatformAccessProvider } from '@/features/platform/access'
 
 export function AppShell() {
   const contentRef = useRef<HTMLElement>(null)
 
   return (
-    <PlatformAccessProvider><div className="min-h-dvh min-w-0 bg-background text-foreground md:flex">
+    <PlatformAccessProvider><NotificationFeedProvider><div className="min-h-dvh min-w-0 bg-background text-foreground md:flex">
       <a
         href="#main-content"
         onClick={() => contentRef.current?.focus()}
@@ -31,6 +32,6 @@ export function AppShell() {
           <Outlet />
         </main>
       </div>
-    </div></PlatformAccessProvider>
+    </div></NotificationFeedProvider></PlatformAccessProvider>
   )
 }

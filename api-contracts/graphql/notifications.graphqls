@@ -1,0 +1,52 @@
+type Query {
+  portfolioDashboard(organizationId: ID!): PortfolioDashboard!
+  notifications(organizationId: ID!, limit: Int = 20): [OrganizationNotification!]!
+  notificationUnreadCount(organizationId: ID!): Int!
+  supportNotifications: SupportNotificationFeed!
+}
+
+type Mutation {
+  markNotificationRead(organizationId: ID!, cursor: String!): Boolean!
+}
+
+type SupportNotificationFeed {
+  unreadCount: Int!
+  replies: [SupportNotification!]!
+}
+
+type SupportNotification {
+  messageId: ID!
+  organizationId: ID!
+  organizationName: String!
+  occurredAt: String!
+  unread: Boolean!
+}
+
+type Subscription {
+  notificationEvents(organizationId: ID!, after: String): OrganizationNotification!
+}
+
+type PortfolioDashboard {
+  totalProperties: Int!
+  activeProperties: Int!
+  archivedProperties: Int!
+  totalUnits: Int!
+  availableUnits: Int!
+  unavailableUnits: Int!
+  occupiedUnits: Int!
+}
+
+type OrganizationNotification {
+  cursor: String!
+  kind: NotificationKind!
+  resourceId: ID!
+  unread: Boolean!
+  maintenanceStatus: String
+  occurredAt: String!
+}
+
+enum NotificationKind {
+  MAINTENANCE_CREATED
+  MAINTENANCE_STATUS_CHANGED
+  PAYMENT_RECORDED
+}

@@ -1,10 +1,10 @@
 # Full-stack deployment stack for the Property SaaS platform.
 #
-#   PostgreSQL 15  ->  Spring Boot property-core  ->  React SPA on Nginx
+# PostgreSQL -> property-core -> property-notifications -> React SPA on Nginx
 #
 # The browser talks only to the Nginx container, which serves the SPA and
-# reverse-proxies /api/ to the backend over the internal Docker network. Neither
-# PostgreSQL nor the backend publishes a host port.
+# proxies REST and GraphQL to their respective services on the internal network.
+# PostgreSQL and the Spring services do not publish host ports.
 #
 # Start it with:
 #   cp .env.example .env      # then edit the secrets
@@ -56,9 +56,41 @@ services:
       # The production variable is only consulted outside the development profile.
       BROWSER_ALLOWED_ORIGINS: ${BROWSER_ALLOWED_ORIGINS:-${PUBLIC_ORIGIN:-http://localhost:8080}}
       BROWSER_DEV_ALLOWED_ORIGINS: ${BROWSER_DEV_ALLOWED_ORIGINS:-${PUBLIC_ORIGIN:-http://localhost:8080}}
+      LOGGING_STRUCTURED_FORMAT_CONSOLE: ecs
+      ZIPKIN_ENABLED: ${ZIPKIN_ENABLED:-false}
+      ZIPKIN_ENDPOINT: http://zipkin:9411/api/v2/spans
+      TRACE_SAMPLING_PROBABILITY: ${TRACE_SAMPLING_PROBABILITY:-0.1}
       JAVA_OPTS: ${JAVA_OPTS:--XX:MaxRAMPercentage=75.0}
     expose:
       - "8081"
+    networks:
+      - app
+
+  property-notifications:
+    build:
+      context: ../backend/property-notifications
+    image: property-saas-notifications:f8
+    restart: unless-stopped
+    depends_on:
+      property-core:
+        condition: service_healthy
+    environment:
+      CORE_URL: http://property-core:8081
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set (see .env.example)}
+      LOGGING_STRUCTURED_FORMAT_CONSOLE: ecs
+      ZIPKIN_ENABLED: ${ZIPKIN_ENABLED:-false}
+      ZIPKIN_ENDPOINT: http://zipkin:9411/api/v2/spans
+      TRACE_SAMPLING_PROBABILITY: ${TRACE_SAMPLING_PROBABILITY:-0.1}
+    expose:
+      - "8082"
+    networks:
+      - app
+
+  zipkin:
+    image: openzipkin/zipkin:3
+    profiles: [observability]
+    ports:
+      - "127.0.0.1:9411:9411"
     networks:
       - app
 
@@ -70,6 +102,8 @@ services:
     restart: unless-stopped
     depends_on:
       property-core:
+        condition: service_healthy
+      property-notifications:
         condition: service_healthy
     environment:
       # Empty means "call the same origin", which Nginx proxies to property-core.

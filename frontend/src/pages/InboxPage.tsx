@@ -1,7 +1,8 @@
 import { PageHeader } from '@/components/ui/page-header'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router'
+import { Link, useLocation, useParams } from 'react-router'
 import { MessageCircle, RefreshCw, Send, ShieldCheck } from 'lucide-react'
+import { useNotificationFeed } from '@/features/notifications/NotificationFeedProvider'
 import { useAuth } from '@/features/auth/context'
 import { useOrganization } from '@/features/organization/context'
 import { organizationStatusPath, type RestrictedOrganization } from '@/features/organization/RestrictedOrganizations'
@@ -44,6 +45,8 @@ export function InboxPage() {
 
 function InboxContent({ id, name }: { id: string; name?: string }) {
   const { service } = useAuth()
+  const { hash } = useLocation()
+  const notificationFeed = useNotificationFeed()
   const [messages, setMessages] = useState<Message[]>([])
   const [error, setError] = useState('')
   const [actionError, setActionError] = useState('')
@@ -124,10 +127,15 @@ function InboxContent({ id, name }: { id: string; name?: string }) {
     }
   }, [load])
 
+  useEffect(() => {
+    if (loaded && hash.startsWith('#message-')) document.getElementById(hash.slice(1))?.scrollIntoView({ block: 'nearest' })
+  }, [hash, loaded])
+
   const markRead = async (messageId: string) => {
     setActionError('')
     try {
       await service.request('post', `${path}/${messageId}/read`)
+      void notificationFeed?.refreshSupport()
       await load()
     } catch (requestError) {
       setActionError(messageError(requestError, 'mark the message read'))
@@ -233,7 +241,8 @@ function InboxContent({ id, name }: { id: string; name?: string }) {
               return (
                 <article
                   key={item.id}
-                  className={`flex ${incoming ? 'justify-start' : 'justify-end'}`}
+                  id={`message-${item.id}`}
+                  className={`flex target:rounded-xl target:ring-2 target:ring-ring ${incoming ? 'justify-start' : 'justify-end'}`}
                 >
                   <div
                     className={`w-full max-w-[90%] space-y-2 rounded-2xl border p-4 shadow-sm sm:max-w-[78%] ${

@@ -5,6 +5,7 @@ test('dashboard errors never reveal bodies, retry safely, and announce loading',
   await signIn(page, account)
   let release!: () => void
   const gate = new Promise<void>(resolve => { release = resolve })
+  await page.route('**/api/graphql', route => route.fulfill({ status: 503 }))
   await page.route('**/dashboard/summary', async route => { await gate; await route.fulfill({ status: 500, body: 'secret SQL stack trace' }) })
   await page.getByRole('button', { name: 'Refresh dashboard' }).click()
   release()

@@ -53,6 +53,8 @@ test('startup CSRF network failure keeps the protected URL and allows a safe ret
 test('same-context cross-tab account change invalidates the established tab', async ({ page, context, qa }) => {
   const first = await qa.account(), second = await qa.account()
   await signIn(page, first)
+  // Simulate a missing refresh cookie while the first tab still has an access token in memory.
+  await context.clearCookies()
   const other = await context.newPage()
   await signIn(other, second)
   await expect(page).toHaveURL(/\/login$/)
@@ -71,7 +73,12 @@ test('multi-membership selection cancels delayed data and isolates cached portfo
   let release!: () => void
   const gate = new Promise<void>(resolve => { release = resolve })
   let delayed = false
-  await page.route(`**/organizations/${first.organizationId}/dashboard/summary`, async route => {
+  await page.route('**/api/graphql', async route => {
+    const request = route.request().postDataJSON()
+    if (request?.variables?.organizationId !== first.organizationId) {
+      await route.continue()
+      return
+    }
     const response = await route.fetch()
     delayed = true
     await gate
@@ -85,14 +92,14 @@ test('multi-membership selection cancels delayed data and isolates cached portfo
   await expect(page.getByLabel('Total properties: 1')).toHaveCount(0)
   await expect(page.getByRole('link', { name: 'Add property', exact: true })).toHaveCount(0)
   await visit(page, '/properties')
-  await expect(page.getByText('No properties found.')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'No properties yet' })).toBeVisible()
 })
 
 test('ambiguous refresh fails closed with no automatic replay', async ({ page, qa }) => {
   const account = await qa.account()
+  await signIn(page, account)
   let attempts = 0
   await page.route('**/api/v1/browser-auth/refresh', async route => { attempts++; await route.abort('failed') })
-  await signIn(page, account)
   await expect(page.getByRole('alert')).toContainText('could not be refreshed safely', { timeout: 15000 })
   await expect(page.getByRole('heading', { name: 'Enterprise Portfolio Dashboard' })).toHaveCount(0)
   await page.reload()

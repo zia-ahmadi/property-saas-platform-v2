@@ -1,0 +1,118 @@
+openapi: 3.1.0
+info:
+  title: Organization notification event feed
+  version: 1.0.0
+paths:
+  /api/v1/organizations/{organizationId}/notification-events:
+    get:
+      summary: Read committed maintenance and payment activity for an organization
+      description: >-
+        Results are filtered by current maintenance and billing permissions.
+        With no cursor, returns the newest results first. With a cursor, returns
+        results strictly after that cursor in ascending order. Cursors are scoped
+        to the organization.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: after
+          in: query
+          schema: { type: integer, format: int64, minimum: 0 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Visible events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NotificationEvent'
+        '400': { description: Invalid cursor or limit }
+        '401': { description: Bearer token required }
+        '403': { description: Active membership and the relevant permission required }
+  /api/v1/organizations/{organizationId}/notification-events/unread-count:
+    get:
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: organizationId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Count of visible organization events unread by this user
+          content:
+            application/json:
+              schema: { type: integer, format: int64, minimum: 0 }
+        '401': { description: Bearer token required }
+        '403': { description: Active membership and the relevant permission required }
+  /api/v1/organizations/{organizationId}/notification-events/{cursor}/read:
+    post:
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: organizationId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: cursor, in: path, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+      responses:
+        '204': { description: Receipt recorded or already present }
+        '401': { description: Bearer token required }
+        '403': { description: Active membership and the relevant permission required }
+        '404': { description: Notification missing or invisible }
+  /api/v1/organizations/{organizationId}/notification-events/read:
+    post:
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: organizationId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Visible organization notifications marked read for this user }
+        '401': { description: Bearer token required }
+        '403': { description: Active membership and the relevant permission required }
+  /api/v1/my-support-notifications:
+    get:
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Recent incoming support replies to organizations owned by the caller, including restricted organizations
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SupportFeed' }
+        '401': { description: Bearer token required }
+  /api/v1/my-support-notifications/read:
+    post:
+      security: [{ bearerAuth: [] }]
+      responses:
+        '204': { description: Incoming support replies for organizations owned by the caller marked read }
+        '401': { description: Bearer token required }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  schemas:
+    NotificationEvent:
+      type: object
+      required: [cursor, kind, resourceId, occurredAt, unread]
+      properties:
+        cursor: { type: string, pattern: '^[0-9]+$' }
+        kind: { type: string, enum: [MAINTENANCE_CREATED, MAINTENANCE_STATUS_CHANGED, PAYMENT_RECORDED] }
+        resourceId: { type: string, format: uuid }
+        maintenanceStatus: { type: [string, 'null'] }
+        occurredAt: { type: string, format: date-time }
+        unread: { type: boolean }
+    SupportFeed:
+      type: object
+      required: [replies, unreadCount]
+      properties:
+        unreadCount: { type: integer, format: int64, minimum: 0 }
+        replies:
+          type: array
+          maxItems: 40
+          items:
+            type: object
+            required: [messageId, organizationId, organizationName, occurredAt, unread]
+            properties:
+              messageId: { type: string, format: uuid }
+              organizationId: { type: string, format: uuid }
+              organizationName: { type: string }
+              occurredAt: { type: string, format: date-time }
+              unread: { type: boolean }

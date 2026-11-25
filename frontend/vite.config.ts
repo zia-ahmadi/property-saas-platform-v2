@@ -12,6 +12,11 @@ export default defineConfig({
     restoreMocks: true,
     unstubGlobals: true,
   },
+  server: {
+    proxy: {
+      '/api/graphql': { target: process.env.QA_GRAPHQL_URL ?? 'http://localhost:8082' },
+    },
+  },
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {

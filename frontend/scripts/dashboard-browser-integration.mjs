@@ -50,7 +50,7 @@ chrome.stdio[4].setEncoding('utf8').on('data', (chunk) => {
     buf = buf.slice(e + 1)
     if (
       m.method === 'Network.responseReceived' &&
-      m.params.response.url.endsWith('/dashboard/summary') &&
+      (m.params.response.url.endsWith('/dashboard/summary') || m.params.response.url.endsWith('/api/graphql')) &&
       m.params.response.status === 200
     )
       summaryRequests.set(m.params.requestId, m.sessionId)
@@ -59,8 +59,12 @@ chrome.stdio[4].setEncoding('utf8').on('data', (chunk) => {
       summaryRequests.delete(m.params.requestId)
       void send('Network.getResponseBody', { requestId: m.params.requestId }, session)
         .then((result) => {
-          latestSummary = JSON.parse(result.body)
-          summarySerial++
+          const parsed = JSON.parse(result.body)
+          const summary = parsed.data?.portfolioDashboard ?? parsed
+          if (typeof summary.totalProperties === 'number') {
+            latestSummary = summary
+            summarySerial++
+          }
         })
         .catch(() => {})
     }

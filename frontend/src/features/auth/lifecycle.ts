@@ -204,6 +204,34 @@ export class AuthLifecycleService {
     const generation = this.generation
     try { await this.deps.coordinator.logout(); return true } catch { if (this.valid(generation)) this.set({ status: 'anonymous', message: 'Signed out locally, but server logout could not be confirmed.' }); return false }
   }
+  async graphql(body: unknown, signal: AbortSignal, stream = false): Promise<Response> {
+    if (this.state.status !== 'authenticated' || !this.token) throw new Error('Authentication required')
+    const generation = this.generation
+    const response = await fetch('/api/graphql', {
+      method: 'POST',
+      credentials: 'omit',
+      redirect: 'error',
+      cache: 'no-store',
+      signal: stream ? signal : AbortSignal.any([signal, AbortSignal.timeout(7_000)]),
+      headers: {
+        Authorization: `Bearer ${this.token}`,
+        'Content-Type': 'application/json',
+        Accept: stream ? 'text/event-stream' : 'application/json',
+      },
+      body: JSON.stringify(body),
+    })
+    if (!this.valid(generation)) {
+      await response.body?.cancel().catch(() => undefined)
+      throw new Error('Authentication changed')
+    }
+    if (!response.ok) {
+      await response.body?.cancel().catch(() => undefined)
+      if (response.status === 401) void this.refresh()
+      throw new Error(`GraphQL request failed (${response.status})`)
+    }
+    return response
+  }
+
   async request<T>(method: 'get' | 'post' | 'put' | 'patch' | 'delete', path: string, body?: unknown, options: RequestOptions = {}): Promise<T> {
     if (this.state.status !== 'authenticated' || !this.token) throw new Error('Authentication required')
     const generation = this.generation

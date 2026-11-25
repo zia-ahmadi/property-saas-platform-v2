@@ -29,6 +29,7 @@ import { InboxPage } from '@/pages/InboxPage'
 import { PlatformPage } from '@/pages/PlatformPage'
 import { InvitationPage } from '@/pages/InvitationPage'
 import { OrganizationAccessPage } from '@/features/organization/RestrictedOrganizations'
+import { OrganizationNotificationsPage } from '@/pages/OrganizationNotificationsPage'
 import { HomePage } from '@/pages/HomePage'
 
 export function AppRouter() {
@@ -49,6 +50,7 @@ export function AppRouter() {
           <Route element={<AppShell />}>
             <Route element={<PlatformRoute />}><Route path="/platform" element={<PlatformPage />} /></Route>
             <Route path="/organization-messages/:organizationId" element={<InboxPage />} />
+            <Route path="/notifications" element={<OrganizationNotificationsPage />} />
             <Route path="/access" element={<OrganizationAccessPage />} />
             <Route element={<OrganizationRoute permission="MEMBERSHIP_MANAGE" />}><Route path="/team" element={<TeamPage />} /><Route path="/inbox" element={<InboxPage />} /></Route>
             <Route element={<OrganizationRoute permission="ORGANIZATION_VIEW" />}>

@@ -1,7 +1,7 @@
 import { spawn, spawnSync } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import { createServer } from 'node:net'
-import { mkdirSync, openSync, closeSync } from 'node:fs'
+import { mkdirSync, openSync, closeSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 
@@ -9,6 +9,7 @@ process.umask(0o077)
 const frontend = fileURLToPath(new URL('../', import.meta.url))
 const repo = path.dirname(frontend.replace(/\/$/, ''))
 const backend = path.join(repo, 'backend/property-core')
+const notifications = path.join(repo, 'backend/property-notifications')
 const id = randomBytes(6).toString('hex')
 const container = `property-saas-f7-${id}`
 const logs = path.join(frontend, '.qa', id)
@@ -60,7 +61,10 @@ async function cleanup() {
 process.once('SIGINT', () => { void cleanup().finally(() => process.exit(130)) })
 process.once('SIGTERM', () => { void cleanup().finally(() => process.exit(143)) })
 try {
-  const appPort = await port(), apiPort = await port()
+  const contract = readFileSync(path.join(repo, 'api-contracts/graphql/notifications.graphqls'))
+  const runtimeSchema = readFileSync(path.join(notifications, 'src/main/resources/graphql/notifications.graphqls'))
+  if (!contract.equals(runtimeSchema)) throw new Error('The published notification GraphQL contract differs from the runtime schema')
+  const appPort = await port(), apiPort = await port(), graphqlPort = await port()
   const env = { ...process.env, POSTGRES_PASSWORD: randomBytes(24).toString('hex') }
   sync('docker', ['run', '--rm', '-d', '--name', container, '--label', 'property-saas.qa=f7', '-e', 'POSTGRES_PASSWORD', '-e', 'POSTGRES_USER=qa_admin', '-e', 'POSTGRES_DB=qa_e2e', '-p', '127.0.0.1::5432', 'postgres:15-alpine'], { env })
   created = true
@@ -76,6 +80,7 @@ try {
     JWT_SECRET: randomBytes(32).toString('base64'), BROWSER_CSRF_SECRET: randomBytes(32).toString('base64'),
     BROWSER_ALLOWED_ORIGINS: 'https://app.example.test', QA_DB_CONTAINER: container,
     QA_API_URL: `http://localhost:${apiPort}`, QA_APP_URL: `http://localhost:${appPort}`,
+    QA_GRAPHQL_URL: `http://localhost:${graphqlPort}`,
   })
   if (process.argv.includes('--checks')) {
     await run('npm', ['test', '--', '--maxWorkers=2'])
@@ -87,6 +92,10 @@ try {
   }
   const api = server('./mvnw', ['-o', 'spring-boot:run'], 'backend.log', { cwd: backend, env: { ...env, SPRING_PROFILES_ACTIVE: 'development', BROWSER_DEV_ALLOWED_ORIGINS: env.QA_APP_URL, SERVER_PORT: String(apiPort), APP_JWT_ACCESS_TOKEN_EXPIRATION: process.env.QA_ACCESS_TOKEN_EXPIRATION ?? '35' } })
   await waitFor(`${env.QA_API_URL}/api/v1/browser-auth/session`, api)
+  const graphql = server('./mvnw', ['-o', 'spring-boot:run'], 'notifications.log', {
+    cwd: notifications, env: { ...env, CORE_URL: env.QA_API_URL, SERVER_PORT: String(graphqlPort) },
+  })
+  await waitFor(`${env.QA_GRAPHQL_URL}/actuator/health`, graphql)
   const web = server('npm', ['run', 'dev', '--', '--host', 'localhost', '--port', String(appPort), '--strictPort'], 'frontend.log', { cwd: frontend, env: { ...env, VITE_API_BASE_URL: env.QA_API_URL } })
   await waitFor(env.QA_APP_URL, web)
   console.log(`QA uses disposable PostgreSQL and local servers. Logs: ${path.relative(frontend, logs)}`)
