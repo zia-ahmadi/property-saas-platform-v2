@@ -13,6 +13,8 @@ export interface LeaseTerms {
   deposit: number
   currency: string
   notes: string | null
+  paymentTerms?: string | null
+  agreementTerms?: string | null
 }
 
 export interface Lease extends LeaseTerms {
@@ -26,6 +28,11 @@ export interface Lease extends LeaseTerms {
   closedAt: string | null
   version: number
 }
+
+export type LeaseDocument = Pick<Lease,
+  'id' | 'status' | 'renterName' | 'propertyName' | 'unitNumber' | 'startsOn' | 'endsOn' |
+  'monthlyRent' | 'deposit' | 'currency' | 'paymentTerms' | 'agreementTerms' | 'closedAt'
+> & { organizationName: string; propertyAddress: string }
 
 export interface LeasePage<T> {
   content: T[]

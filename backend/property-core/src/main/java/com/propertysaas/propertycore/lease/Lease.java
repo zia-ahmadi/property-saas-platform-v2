@@ -15,7 +15,7 @@ import java.util.UUID;
 public record Lease(
         UUID id, UUID propertyId, String propertyName, UUID unitId, String unitNumber,
         UUID renterId, String renterName, LocalDate startsOn, LocalDate endsOn, BigDecimal monthlyRent,
-        BigDecimal deposit, String currency, String notes, Status status,
+        BigDecimal deposit, String currency, String notes, String paymentTerms, String agreementTerms, Status status,
         OffsetDateTime activatedAt, OffsetDateTime closedAt, OffsetDateTime createdAt,
         OffsetDateTime updatedAt, long version
 ) {
@@ -30,7 +30,16 @@ public record Lease(
             @NotNull @DecimalMin("0") @Digits(integer = 10, fraction = 2) BigDecimal monthlyRent,
             @NotNull @DecimalMin("0") @Digits(integer = 10, fraction = 2) BigDecimal deposit,
             @NotNull @Pattern(regexp = "[A-Z]{3}") String currency,
-            @Size(max = 4000) String notes
+            @Size(max = 4000) String notes,
+            @Size(max = 1000) String paymentTerms,
+            @Size(max = 12000) String agreementTerms
+    ) {}
+
+    public record Document(
+            UUID id, Status status, String organizationName, String renterName,
+            String propertyName, String unitNumber, String propertyAddress,
+            LocalDate startsOn, LocalDate endsOn, BigDecimal monthlyRent, BigDecimal deposit,
+            String currency, String paymentTerms, String agreementTerms, OffsetDateTime closedAt
     ) {}
 
     public record Update(@NotNull @jakarta.validation.Valid Terms terms, @NotNull @PositiveOrZero Long version) {}

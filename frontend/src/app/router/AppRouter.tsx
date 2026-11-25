@@ -6,6 +6,7 @@ import { IssueInvoicePage } from '@/pages/IssueInvoicePage'
 import { InvoiceDetailsPage } from '@/pages/InvoiceDetailsPage'
 import { LeasesPage } from '@/pages/LeasesPage'
 import { LeaseDetailsPage } from '@/pages/LeaseDetailsPage'
+import { LeasePrintPage } from '@/pages/LeasePrintPage'
 import { MaintenancePage } from '@/pages/MaintenancePage'
 import { MaintenanceRequestPage } from '@/pages/MaintenanceRequestPage'
 import { DashboardPage } from '@/pages/DashboardPage'
@@ -42,6 +43,9 @@ export function AppRouter() {
 
         {/* Shared dashboard layout */}
         <Route element={<ProtectedRoute />}>
+          <Route element={<OrganizationRoute permission="LEASE_MANAGE" />}>
+            <Route path="/leases/:leaseId/print" element={<LeasePrintPage />} />
+          </Route>
           <Route element={<AppShell />}>
             <Route element={<PlatformRoute />}><Route path="/platform" element={<PlatformPage />} /></Route>
             <Route path="/organization-messages/:organizationId" element={<InboxPage />} />

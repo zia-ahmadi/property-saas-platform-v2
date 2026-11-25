@@ -71,6 +71,13 @@ public class LeaseController {
         return leases.get(organizationId, id, false);
     }
 
+    @GetMapping("/{id}/document")
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    public Document document(@PathVariable UUID organizationId, @PathVariable UUID id) {
+        authorize(organizationId);
+        return leases.document(organizationId, id);
+    }
+
     @PostMapping
     @Transactional
     public ResponseEntity<Lease> create(@PathVariable UUID organizationId, @Valid @RequestBody Terms terms) {
@@ -149,9 +156,13 @@ public class LeaseController {
             throw new IllegalArgumentException("Use valid lease dates with an end date on or after the start date.");
         }
         Currency.getInstance(terms.currency());
-        if (terms.notes() != null && terms.notes().indexOf(0) >= 0) {
-            throw new IllegalArgumentException("Lease notes must contain valid text.");
+        if (containsNull(terms.notes()) || containsNull(terms.paymentTerms()) || containsNull(terms.agreementTerms())) {
+            throw new IllegalArgumentException("Lease text must contain valid characters.");
         }
+    }
+
+    private static boolean containsNull(String text) {
+        return text != null && text.indexOf(0) >= 0;
     }
 
     private static boolean invalidDate(LocalDate date) {

@@ -29,13 +29,30 @@ class LeaseRepository {
             SELECT l.*, p.name AS property_name, u.unit_number,
                    concat(r.first_name, ' ', r.last_name) AS renter_name
             """ + REGISTER;
+    private static final String CURRENT_PARTIES = """
+            SELECT jsonb_build_object(
+                'organizationName', o.name,
+                'renterName', concat(r.first_name, ' ', r.last_name),
+                'propertyName', p.name,
+                'unitNumber', u.unit_number,
+                'propertyAddress', concat_ws(', ', p.address_line1, nullif(p.address_line2, ''), p.city, p.country_code)
+            )
+            FROM leases l
+            JOIN organizations o ON o.id = l.organization_id
+            JOIN properties p ON p.id = l.property_id
+            JOIN units u ON u.id = l.unit_id
+            JOIN renters r ON r.id = l.renter_id
+            WHERE l.organization_id = :org AND l.id = :id
+            """;
+
     private static final RowMapper<Lease> LEASE = (rs, row) -> new Lease(
             rs.getObject("id", UUID.class), rs.getObject("property_id", UUID.class), rs.getString("property_name"),
             rs.getObject("unit_id", UUID.class), rs.getString("unit_number"),
             rs.getObject("renter_id", UUID.class), rs.getString("renter_name"),
             rs.getObject("starts_on", LocalDate.class), rs.getObject("ends_on", LocalDate.class),
             rs.getBigDecimal("monthly_rent"), rs.getBigDecimal("deposit"), rs.getString("currency"),
-            rs.getString("notes"), Status.valueOf(rs.getString("status")),
+            rs.getString("notes"), rs.getString("payment_terms"), rs.getString("agreement_terms"),
+            Status.valueOf(rs.getString("status")),
             rs.getObject("activated_at", OffsetDateTime.class), rs.getObject("closed_at", OffsetDateTime.class),
             rs.getObject("created_at", OffsetDateTime.class), rs.getObject("updated_at", OffsetDateTime.class),
             rs.getLong("version")
@@ -96,6 +113,26 @@ class LeaseRepository {
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "Lease not found"));
     }
 
+    Document document(UUID org, UUID id) {
+        Lease lease = get(org, id, false);
+        String query = """
+                SELECT parties ->> 'organizationName' AS organization_name,
+                       parties ->> 'renterName' AS renter_name,
+                       parties ->> 'propertyName' AS property_name,
+                       parties ->> 'unitNumber' AS unit_number,
+                       parties ->> 'propertyAddress' AS property_address
+                FROM (
+                    SELECT coalesce(agreement_parties, (%s)) AS parties
+                    FROM leases WHERE organization_id = :org AND id = :id
+                ) agreement
+                """.formatted(CURRENT_PARTIES);
+        return jdbc.queryForObject(query, scope(org).addValue("id", id), (rs, row) -> new Document(
+                lease.id(), lease.status(), rs.getString("organization_name"), rs.getString("renter_name"),
+                rs.getString("property_name"), rs.getString("unit_number"), rs.getString("property_address"),
+                lease.startsOn(), lease.endsOn(), lease.monthlyRent(), lease.deposit(), lease.currency(),
+                lease.paymentTerms(), lease.agreementTerms(), lease.closedAt()));
+    }
+
     UUID validateParties(UUID org, UUID unit, UUID renter) {
         UUID property = jdbc.query("""
                 SELECT p.id FROM units u JOIN properties p ON p.id = u.property_id
@@ -117,8 +154,9 @@ class LeaseRepository {
     Lease create(UUID org, Terms terms, UUID property) {
         UUID id = jdbc.queryForObject("""
                 INSERT INTO leases (organization_id, property_id, unit_id, renter_id, starts_on, ends_on,
-                                    monthly_rent, deposit, currency, notes)
-                VALUES (:org, :property, :unit, :renter, :start, :end, :rent, :deposit, :currency, :notes)
+                                    monthly_rent, deposit, currency, notes, payment_terms, agreement_terms)
+                VALUES (:org, :property, :unit, :renter, :start, :end, :rent, :deposit, :currency, :notes,
+                        :paymentTerms, :agreementTerms)
                 RETURNING id
                 """, parameters(org, terms, property), UUID.class);
         return get(org, id, false);
@@ -128,7 +166,8 @@ class LeaseRepository {
         jdbc.update("""
                 UPDATE leases SET property_id = :property, unit_id = :unit, renter_id = :renter,
                     starts_on = :start, ends_on = :end, monthly_rent = :rent, deposit = :deposit,
-                    currency = :currency, notes = :notes, updated_at = CURRENT_TIMESTAMP, version = version + 1
+                    currency = :currency, notes = :notes, payment_terms = :paymentTerms,
+                    agreement_terms = :agreementTerms, updated_at = CURRENT_TIMESTAMP, version = version + 1
                 WHERE organization_id = :org AND id = :id
                 """, parameters(org, terms, property).addValue("id", id));
         return get(org, id, false);
@@ -142,11 +181,12 @@ class LeaseRepository {
         }
         jdbc.update("""
                 UPDATE leases SET status = :status,
+                    agreement_parties = CASE WHEN :status = 'ACTIVE' THEN (%s) ELSE agreement_parties END,
                     activated_at = CASE WHEN :status = 'ACTIVE' THEN CURRENT_TIMESTAMP ELSE activated_at END,
                     closed_at = CASE WHEN :status IN ('ENDED', 'CANCELLED') THEN CURRENT_TIMESTAMP ELSE closed_at END,
                     updated_at = CURRENT_TIMESTAMP, version = version + 1
                 WHERE organization_id = :org AND id = :id
-                """, scope(org).addValue("id", lease.id()).addValue("status", next.name()));
+                """.formatted(CURRENT_PARTIES), scope(org).addValue("id", lease.id()).addValue("status", next.name()));
         return get(org, lease.id(), false);
     }
 
@@ -171,7 +211,14 @@ class LeaseRepository {
         return scope(org).addValue("property", property).addValue("unit", terms.unitId())
                 .addValue("renter", terms.renterId()).addValue("start", terms.startsOn()).addValue("end", terms.endsOn())
                 .addValue("rent", terms.monthlyRent()).addValue("deposit", terms.deposit())
-                .addValue("currency", terms.currency()).addValue("notes", terms.notes() == null ? null : terms.notes().strip());
+                .addValue("currency", terms.currency())
+                .addValue("notes", terms.notes() == null ? null : terms.notes().strip())
+                .addValue("paymentTerms", optionalText(terms.paymentTerms()))
+                .addValue("agreementTerms", optionalText(terms.agreementTerms()));
+    }
+
+    private static String optionalText(String value) {
+        return value == null || value.isBlank() ? null : value.strip();
     }
 
     private static MapSqlParameterSource scope(UUID org) {

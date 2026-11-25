@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, ArrowUpRight, CalendarDays, FileText, KeyRound, Wallet } from 'lucide-react'
+import { ArrowLeft, ArrowUpRight, CalendarDays, FileText, KeyRound, Printer, Wallet } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog'
@@ -95,13 +95,16 @@ function LeaseScreen({ leaseId, mode }: { leaseId?: string; mode: 'detail' | 'ne
           }} />
         ) : lease && (
           <article className="overflow-hidden rounded-2xl border bg-card shadow-sm">
-            <header className="flex items-start gap-4 border-b bg-accent/50 p-5 sm:p-7">
+            <header className="flex flex-wrap items-start gap-4 border-b bg-accent/50 p-5 sm:p-7">
               <KeyRound aria-hidden="true" className="size-12 shrink-0 rounded-xl bg-accent p-3 text-accent-foreground" />
-              <div className="min-w-0 space-y-1">
+              <div className="min-w-0 flex-1 basis-36 space-y-1">
                 <LeaseStatus status={lease.status} />
                 <h2 className="wrap-anywhere text-2xl font-semibold tracking-tight">{lease.renterName}</h2>
                 <p className="wrap-anywhere text-sm text-muted-foreground">{lease.propertyName} · Unit {lease.unitNumber}</p>
               </div>
+              <Link to={`/leases/${lease.id}/print`} className={buttonVariants({ variant: 'outline', className: 'h-10' })}>
+                <Printer aria-hidden="true" /> Print lease
+              </Link>
             </header>
             <div className="space-y-6 p-5 sm:p-7">
               <div className="grid gap-3 sm:grid-cols-2">
@@ -122,8 +125,19 @@ function LeaseScreen({ leaseId, mode }: { leaseId?: string; mode: 'detail' | 'ne
                   </dl>
                 </section>
               </div>
+              {(lease.paymentTerms || lease.agreementTerms) && <section className="space-y-4 rounded-xl border p-4">
+                <h3 className="font-semibold">Agreement terms</h3>
+                {lease.paymentTerms && <div className="space-y-1">
+                  <h4 className="text-sm font-medium">Payment instructions</h4>
+                  <p className="wrap-anywhere whitespace-pre-wrap text-sm text-muted-foreground">{lease.paymentTerms}</p>
+                </div>}
+                {lease.agreementTerms && <div className="space-y-1">
+                  <h4 className="text-sm font-medium">Additional terms</h4>
+                  <p className="wrap-anywhere whitespace-pre-wrap text-sm text-muted-foreground">{lease.agreementTerms}</p>
+                </div>}
+              </section>}
               {lease.notes && <section className="space-y-1">
-                <h3 className="font-semibold">Notes</h3>
+                <h3 className="font-semibold">Internal notes</h3>
                 <p className="wrap-anywhere whitespace-pre-wrap text-sm text-muted-foreground">{lease.notes}</p>
               </section>}
               <div className="flex flex-wrap gap-4 text-sm">
@@ -193,6 +207,7 @@ function LeaseForm({ lease, onSaved }: { lease?: Lease; onSaved: (lease: Lease) 
       unitId: unit.id, renterId: renter.id, startsOn, endsOn,
       monthlyRent: Number(text('monthlyRent')), deposit: Number(text('deposit')),
       currency: text('currency'), notes: text('notes') || null,
+      paymentTerms: text('paymentTerms') || null, agreementTerms: text('agreementTerms') || null,
     })
   }
 
@@ -236,9 +251,26 @@ function LeaseForm({ lease, onSaved }: { lease?: Lease; onSaved: (lease: Lease) 
               <Input type="number" name="deposit" required min="0" max="9999999999.99" step="0.01" defaultValue={lease?.deposit ?? 0} />
             </label>
           </div>
-          <label className="block space-y-1 text-sm font-medium">
-            <span>Notes <span className="font-normal text-muted-foreground">(optional)</span></span>
-            <Textarea rows={4} name="notes" maxLength={4000} defaultValue={lease?.notes ?? ''} />
+          <section aria-labelledby="agreement-fields" className="space-y-4 border-t pt-5">
+            <div>
+              <h3 id="agreement-fields" className="font-semibold">Printed agreement</h3>
+              <p className="text-sm text-muted-foreground">These terms appear on the copy you share with the renter.</p>
+            </div>
+            <label className="block space-y-1 text-sm font-medium">
+              <span>Payment instructions <span className="font-normal text-muted-foreground">(optional)</span></span>
+              <Textarea rows={3} name="paymentTerms" maxLength={1000} defaultValue={lease?.paymentTerms ?? ''} aria-describedby="payment-terms-hint" />
+              <span id="payment-terms-hint" className="block text-xs font-normal text-muted-foreground">Include when rent is due and how the renter should pay.</span>
+            </label>
+            <label className="block space-y-1 text-sm font-medium">
+              <span>Additional terms <span className="font-normal text-muted-foreground">(optional)</span></span>
+              <Textarea rows={5} name="agreementTerms" maxLength={12000} defaultValue={lease?.agreementTerms ?? ''} aria-describedby="agreement-terms-hint" />
+              <span id="agreement-terms-hint" className="block text-xs font-normal text-muted-foreground">Enter the agreed terms for utilities, maintenance, notice, and any other conditions that apply.</span>
+            </label>
+          </section>
+          <label className="block space-y-1 border-t pt-5 text-sm font-medium">
+            <span>Internal notes <span className="font-normal text-muted-foreground">(optional)</span></span>
+            <Textarea rows={4} name="notes" maxLength={4000} defaultValue={lease?.notes ?? ''} aria-describedby="lease-notes-hint" />
+            <span id="lease-notes-hint" className="block text-xs font-normal text-muted-foreground">Visible in the workspace only.</span>
           </label>
           {error && <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm">{error}</p>}
           <div className="flex flex-wrap justify-end gap-2 border-t pt-5">

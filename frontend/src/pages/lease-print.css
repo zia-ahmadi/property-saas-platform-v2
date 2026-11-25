@@ -1,0 +1,12 @@
+@page lease-agreement {
+  margin: 16mm;
+}
+
+@media print {
+  .lease-agreement {
+    page: lease-agreement;
+    color: #000;
+    orphans: 3;
+    widows: 3;
+  }
+}
