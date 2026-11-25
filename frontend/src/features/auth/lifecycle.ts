@@ -204,6 +204,19 @@ export class AuthLifecycleService {
     const generation = this.generation
     try { await this.deps.coordinator.logout(); return true } catch { if (this.valid(generation)) this.set({ status: 'anonymous', message: 'Signed out locally, but server logout could not be confirmed.' }); return false }
   }
+  updateProfile(user: SessionResponse['user']) {
+    if (this.state.status !== 'authenticated' || this.state.session.user.id !== user.id) return
+    this.set({ status: 'authenticated', session: { ...this.state.session, user: Object.freeze({ ...user }) } })
+  }
+
+  updateOrganizationName(organizationId: string, name: string) {
+    if (this.state.status !== 'authenticated') return
+    const session = this.state.session
+    const organizations = session.organizations.map(org => org.organizationId === organizationId
+      ? Object.freeze({ ...org, organizationName: name }) : org)
+    this.set({ status: 'authenticated', session: { ...session, organizations: Object.freeze(organizations) } })
+  }
+
   async graphql(body: unknown, signal: AbortSignal, stream = false): Promise<Response> {
     if (this.state.status !== 'authenticated' || !this.token) throw new Error('Authentication required')
     const generation = this.generation

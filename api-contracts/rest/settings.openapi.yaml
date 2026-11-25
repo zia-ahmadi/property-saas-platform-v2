@@ -1,0 +1,75 @@
+openapi: 3.1.0
+info:
+  title: Account and organization settings
+  version: 1.0.0
+security:
+  - bearerAuth: []
+paths:
+  /api/v1/me/profile:
+    put:
+      summary: Update the authenticated user's profile name
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [firstName, lastName]
+              properties:
+                firstName: { type: string, minLength: 1, maxLength: 100 }
+                lastName: { type: string, minLength: 1, maxLength: 100 }
+      responses:
+        '200':
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, email, firstName, lastName]
+                properties:
+                  id: { type: string, format: uuid }
+                  email: { type: string, format: email }
+                  firstName: { type: string }
+                  lastName: { type: string }
+        '400': { description: Invalid name }
+        '401': { description: Bearer token required }
+        '403': { description: Inactive or unavailable account }
+  /api/v1/organizations/{organizationId}:
+    patch:
+      summary: Rename an active organization workspace
+      description: Requires ORGANIZATION_MANAGE. The workspace slug is stable.
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, expectedName]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 150 }
+                expectedName: { type: string, minLength: 1, maxLength: 150, description: Workspace name at the time the edit started }
+      responses:
+        '200':
+          description: Updated workspace
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, name, slug, status]
+                properties:
+                  id: { type: string, format: uuid }
+                  name: { type: string }
+                  slug: { type: string }
+                  status: { type: string }
+        '400': { description: Invalid name }
+        '401': { description: Bearer token required }
+        '403': { description: Active organization management permission required }
+        '409': { description: Workspace changed since the edit started }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }

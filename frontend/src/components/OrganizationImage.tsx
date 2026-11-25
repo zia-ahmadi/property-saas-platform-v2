@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { useOrganization } from '@/features/organization/context'
 import { ApiError } from '@/lib/api/errors'
 
-type ImageResource = 'property' | 'unit' | 'renter'
+type ImageResource = 'property' | 'unit' | 'renter' | 'organization'
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png']
 
@@ -101,7 +101,7 @@ export function OrganizationImage({
   if (thumbnail) {
     const Icon = resourceType === 'renter' ? UserRound : Building2
     return <span className={`size-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-accent text-primary ${className || 'inline-flex'}`} aria-hidden="true">
-      {imageBlob ? <img ref={imageElement} alt="" className="size-full object-cover" /> : <Icon className="size-4" />}
+      {imageBlob ? <img ref={imageElement} alt="" className={`size-full ${resourceType === 'organization' ? 'object-contain' : 'object-cover'}`} /> : <Icon className="size-4" />}
     </span>
   }
 
@@ -112,7 +112,7 @@ export function OrganizationImage({
     <div className={`space-y-2 ${className}`}>
       <div className="relative aspect-[16/9] overflow-hidden rounded-xl border bg-muted/40">
         {imageBlob ? (
-          <img ref={imageElement} alt={alt} className="size-full object-cover" />
+          <img ref={imageElement} alt={alt} className={`size-full ${resourceType === 'organization' ? 'object-contain' : 'object-cover'}`} />
         ) : (
           <div
             role="img"

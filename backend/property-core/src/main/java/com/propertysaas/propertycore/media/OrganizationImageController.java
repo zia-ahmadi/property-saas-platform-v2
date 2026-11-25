@@ -33,7 +33,7 @@ import java.util.UUID;
 public class OrganizationImageController {
     private static final long MAX_IMAGE_BYTES = 5L * 1024 * 1024;
     private static final long MAX_IMAGE_PIXELS = 10_000_000L;
-    private static final Set<String> RESOURCE_TYPES = Set.of("property", "unit", "renter");
+    private static final Set<String> RESOURCE_TYPES = Set.of("property", "unit", "renter", "organization");
 
     private final JdbcTemplate db;
     private final AuthenticatedOrganizationContextResolver contexts;
@@ -81,8 +81,9 @@ public class OrganizationImageController {
             @RequestPart("file") MultipartFile file
     ) {
         contexts.resolve(organizationId);
-        authorization.requirePermission(organizationId, OrganizationPermission.PROPERTY_MANAGE);
         String type = resourceType(resourceType);
+        authorization.requirePermission(organizationId, type.equals("organization")
+                ? OrganizationPermission.ORGANIZATION_MANAGE : OrganizationPermission.PROPERTY_MANAGE);
         requireResource(organizationId, type, resourceId, true);
         StoredImage image = validateImage(file);
         db.update("""
@@ -102,8 +103,9 @@ public class OrganizationImageController {
             @PathVariable UUID resourceId
     ) {
         contexts.resolve(organizationId);
-        authorization.requirePermission(organizationId, OrganizationPermission.PROPERTY_MANAGE);
         String type = resourceType(resourceType);
+        authorization.requirePermission(organizationId, type.equals("organization")
+                ? OrganizationPermission.ORGANIZATION_MANAGE : OrganizationPermission.PROPERTY_MANAGE);
         requireResource(organizationId, type, resourceId, true);
         db.update("DELETE FROM organization_images WHERE organization_id = ? AND resource_type = ? AND resource_id = ?",
                 organizationId, type, resourceId);
@@ -120,6 +122,7 @@ public class OrganizationImageController {
 
     private void requireResource(UUID organizationId, String type, UUID resourceId, boolean write) {
         String state = switch (type) {
+            case "organization" -> organizationId.equals(resourceId) ? "active" : null;
             case "property" -> db.query(
                     "SELECT status FROM properties WHERE id = ? AND organization_id = ?",
                     result -> result.next() ? result.getString(1) : null, resourceId, organizationId);

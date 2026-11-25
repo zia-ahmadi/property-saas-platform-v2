@@ -8,10 +8,10 @@ import { hasPermission } from './permissions'
 vi.mock('@/features/organization/context', () => ({ useOptionalOrganization: () => ({ current: { organizationId: 'one', role: 'STAFF' }, forbidden: false, can: (permission: Parameters<typeof hasPermission>[1]) => hasPermission('STAFF', permission) }) }))
 
 describe('role-aware routes and navigation', () => {
-  it('shows property navigation and hides management settings for staff', () => {
-    render(<MemoryRouter><AppNavigation /></MemoryRouter>); expect(screen.getByRole('link', { name: 'Properties' })).toBeInTheDocument(); expect(screen.queryByRole('link', { name: 'Settings' })).not.toBeInTheDocument()
+  it('shows property navigation and personal settings for staff', () => {
+    render(<MemoryRouter><AppNavigation /></MemoryRouter>); expect(screen.getByRole('link', { name: 'Properties' })).toBeInTheDocument(); expect(screen.getByRole('link', { name: 'Settings' })).toBeInTheDocument()
   })
   it('routes staff away from organization management', () => {
-    render(<MemoryRouter initialEntries={['/settings']}><Routes><Route element={<OrganizationRoute permission="ORGANIZATION_MANAGE" />}><Route path="/settings" element={<p>Settings content</p>} /></Route><Route path="/forbidden" element={<h1>Access denied</h1>} /></Routes></MemoryRouter>); expect(screen.getByRole('heading', { name: 'Access denied' })).toBeInTheDocument(); expect(screen.queryByText('Settings content')).not.toBeInTheDocument()
+    render(<MemoryRouter initialEntries={['/workspace-management']}><Routes><Route element={<OrganizationRoute permission="ORGANIZATION_MANAGE" />}><Route path="/workspace-management" element={<p>Settings content</p>} /></Route><Route path="/forbidden" element={<h1>Access denied</h1>} /></Routes></MemoryRouter>); expect(screen.getByRole('heading', { name: 'Access denied' })).toBeInTheDocument(); expect(screen.queryByText('Settings content')).not.toBeInTheDocument()
   })
 })

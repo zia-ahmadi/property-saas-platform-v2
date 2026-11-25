@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router'
+import { BrowserRouter, Navigate, Routes, Route } from 'react-router'
 import { AppShell } from '@/layouts/AppShell'
 import { LoginPage } from '@/pages/LoginPage'
 import { BillingPage } from '@/pages/BillingPage'
@@ -97,9 +97,8 @@ export function AppRouter() {
               <Route path="/properties/new" element={<PropertyFormPage />} />
               <Route path="/properties/:propertyId/edit" element={<PropertyFormPage edit />} />
             </Route>
-            <Route element={<OrganizationRoute permission="ORGANIZATION_MANAGE" />}>
-              <Route path="/settings" element={<SettingsPage />} />
-            </Route>
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/setting" element={<Navigate to="/settings" replace />} />
           </Route>
 
           <Route path="/forbidden" element={<ForbiddenPage />} />

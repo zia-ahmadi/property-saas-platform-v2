@@ -4,9 +4,9 @@ info:
   version: 1.0.0
   description: >
     One identifying JPEG or PNG image can be stored for each property, unit,
-    or renter. Images are stored in PostgreSQL and are accessible only to active
-    members of the owning organization. Upload and removal require property
-    management permission.
+    renter, or organization. Images are accessible only to active members of
+    the owning organization. Organization logos require organization management
+    permission to change. Other image changes require property management permission.
 servers:
   - url: /
 security:
@@ -21,10 +21,11 @@ paths:
       - name: resourceType
         in: path
         required: true
-        schema: { type: string, enum: [property, unit, renter] }
+        schema: { type: string, enum: [property, unit, renter, organization] }
       - name: resourceId
         in: path
         required: true
+        description: For organization logos, use the organization ID.
         schema: { type: string, format: uuid }
     get:
       operationId: getOrganizationImage
@@ -54,7 +55,7 @@ paths:
       responses:
         '204': { description: Image saved }
         '400': { description: Invalid or unsupported image }
-        '403': { description: Property management permission required }
+        '403': { description: Management permission for this resource required }
         '404': { description: Entity does not belong to this organization }
         '409': { description: Archived entities cannot have their image changed }
         '413': { description: Image exceeds the maximum size }
@@ -63,7 +64,7 @@ paths:
       summary: Remove an identifying image
       responses:
         '204': { description: Image removed if present }
-        '403': { description: Property management permission required }
+        '403': { description: Management permission for this resource required }
         '404': { description: Entity does not belong to this organization }
 components:
   securitySchemes:

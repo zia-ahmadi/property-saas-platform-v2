@@ -58,7 +58,6 @@ const destinations = [
     to: '/settings',
     label: 'Settings',
     icon: Settings,
-    permission: 'ORGANIZATION_MANAGE' as const,
     group: 'Organization',
   },
 ]

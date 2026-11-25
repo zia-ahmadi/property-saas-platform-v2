@@ -22,7 +22,7 @@ function readSelection(): Selection | undefined {
 export function OrganizationProvider({ children }: { children: React.ReactNode }) {
   const { state, service } = useAuth()
   const [selected, setSelected] = useState(readSelection)
-  const [deniedScope, setDeniedScope] = useState<{ identity: string; id: string; session: object }>()
+  const [deniedScope, setDeniedScope] = useState<{ identity: string; id: string; membership: object }>()
   const version = useRef(0)
   const selectedRef = useRef(selected)
   const organizations = state.status === 'authenticated' ? state.session.organizations : []
@@ -32,7 +32,7 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
   useEffect(() => service.subscribe(() => { version.current++ }), [service])
   useEffect(() => { discardOrganizationQueries(queryClient, [identity, current?.organizationId, current?.role]) }, [identity, current?.organizationId, current?.role])
   const value: OrganizationContextValue = {
-    current, organizations, forbidden: !!identity && deniedScope?.identity === identity && deniedScope.id === current?.organizationId && state.status === 'authenticated' && deniedScope.session === state.session,
+    current, organizations, forbidden: !!identity && deniedScope?.identity === identity && deniedScope.id === current?.organizationId && state.status === 'authenticated' && deniedScope.membership === current,
     select(id) {
       if (!identity || !organizations.some(org => org.organizationId === id) || id === current?.organizationId) return
       version.current++
@@ -64,7 +64,7 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
         return result
       } catch (error) {
         if (capturedVersion !== version.current) throw new Error('Organization changed', { cause: error })
-        if (error instanceof ApiError && error.status === 403 && state.status === 'authenticated') setDeniedScope({ identity, id: current.organizationId, session: state.session })
+        if (error instanceof ApiError && error.status === 403 && state.status === 'authenticated') setDeniedScope({ identity, id: current.organizationId, membership: current })
         throw error
       }
     },
