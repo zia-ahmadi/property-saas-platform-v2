@@ -28,7 +28,7 @@ export function MobileNavigation() {
     >
       <Dialog.Trigger
         ref={triggerRef}
-        render={<Button variant="outline" size="icon" className="size-11 shrink-0 md:hidden" />}
+        render={<Button variant="outline" size="icon" className="size-10 shrink-0 md:hidden" />}
         aria-label="Open navigation menu"
         aria-expanded={open}
       >
@@ -52,7 +52,7 @@ export function MobileNavigation() {
               Property SaaS navigation
             </Dialog.Title>
             <Dialog.Close
-              render={<Button variant="ghost" size="icon" className="size-11 shrink-0" />}
+              render={<Button variant="ghost" size="icon" className="size-10 shrink-0" />}
               aria-label="Close navigation menu"
             >
               <X aria-hidden="true" className="size-5" />
