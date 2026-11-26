@@ -1,0 +1,377 @@
+openapi: 3.1.0
+info:
+  title: Properties and units
+  version: 1.0.0
+  description: Organization-scoped property records and the units within each property. Access requires active organization
+    membership.
+security:
+- {bearerAuth: []}
+paths:
+  /api/v1/organizations/{organizationId}/properties:
+    parameters:
+    - name: organizationId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    get:
+      operationId: listProperties
+      summary: List organization properties
+      description: Sorted by creation time descending, then ID descending.
+      parameters:
+      - name: page
+        in: query
+        schema: {type: integer, minimum: 0, default: 0}
+      - name: size
+        in: query
+        schema: {type: integer, minimum: 1, maximum: 100, default: 10}
+      - name: search
+        in: query
+        schema: {type: string, maxLength: 150, default: ''}
+      - name: status
+        in: query
+        schema: {$ref: '#/components/schemas/PropertyStatus'}
+      - name: type
+        in: query
+        schema: {$ref: '#/components/schemas/PropertyType'}
+      responses:
+        '200':
+          description: Page of properties
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/PropertyPage'}
+        '400': {description: Invalid request}
+        '401': {description: Bearer access token required or invalid}
+        '403': {description: Active organization membership required}
+    post:
+      operationId: createProperty
+      summary: Create a property
+      description: Requires PROPERTY_MANAGE.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateProperty'}
+      responses:
+        '201':
+          description: Property created
+          headers:
+            Location:
+              description: Relative URL of the created resource
+              schema: {type: string, format: uri-reference}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Property'}
+        '400': {description: Invalid request}
+        '401': {description: Bearer access token required or invalid}
+        '403': {description: Active organization membership and the required permission are required}
+  /api/v1/organizations/{organizationId}/properties/{propertyId}:
+    parameters:
+    - name: organizationId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    - name: propertyId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    get:
+      operationId: getProperty
+      summary: Read property details
+      responses:
+        '200':
+          description: Property details
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Property'}
+        '400': {description: Invalid request}
+        '401': {description: Bearer access token required or invalid}
+        '403': {description: Active organization membership required}
+        '404': {description: Resource not found in the requested organization}
+    patch:
+      operationId: updateProperty
+      summary: Update selected property fields
+      description: Requires PROPERTY_MANAGE. Omitted fields retain their values. Set addressLine2 to null to clear it.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/UpdateProperty'}
+      responses:
+        '200':
+          description: Updated property
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Property'}
+        '400': {description: Invalid request}
+        '401': {description: Bearer access token required or invalid}
+        '403': {description: Active organization membership and the required permission are required}
+        '404': {description: Resource not found in the requested organization}
+  /api/v1/organizations/{organizationId}/properties/{propertyId}/archive:
+    parameters:
+    - name: organizationId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    - name: propertyId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    patch:
+      operationId: archiveProperty
+      summary: Archive a property
+      description: Requires PROPERTY_MANAGE. Repeated requests succeed.
+      responses:
+        '200':
+          description: Archived property
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Property'}
+        '400': {description: Invalid request}
+        '401': {description: Bearer access token required or invalid}
+        '403': {description: Active organization membership and the required permission are required}
+        '404': {description: Resource not found in the requested organization}
+  /api/v1/organizations/{organizationId}/properties/{propertyId}/units:
+    parameters:
+    - name: organizationId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    - name: propertyId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    get:
+      operationId: listUnits
+      summary: List units in a property
+      description: Sorted by creation time descending, then ID descending.
+      parameters:
+      - name: page
+        in: query
+        schema: {type: integer, minimum: 0, default: 0}
+      - name: size
+        in: query
+        schema: {type: integer, minimum: 1, maximum: 100, default: 10}
+      responses:
+        '200':
+          description: Page of units
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/UnitPage'}
+        '400': {description: Invalid request}
+        '401': {description: Bearer access token required or invalid}
+        '403': {description: Active organization membership required}
+        '404': {description: Resource not found in the requested organization}
+    post:
+      operationId: createUnit
+      summary: Create a unit
+      description: Requires PROPERTY_MANAGE.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateUnit'}
+      responses:
+        '201':
+          description: Unit created
+          headers:
+            Location:
+              description: Relative URL of the created resource
+              schema: {type: string, format: uri-reference}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Unit'}
+        '400': {description: Invalid request}
+        '401': {description: Bearer access token required or invalid}
+        '403': {description: Active organization membership and the required permission are required}
+        '404': {description: Resource not found in the requested organization}
+        '409': {description: Property is archived or the unit number is already in use}
+  /api/v1/organizations/{organizationId}/properties/{propertyId}/units/{unitId}:
+    parameters:
+    - name: organizationId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    - name: propertyId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    - name: unitId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    get:
+      operationId: getUnit
+      summary: Read unit details
+      responses:
+        '200':
+          description: Unit details
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Unit'}
+        '400': {description: Invalid request}
+        '401': {description: Bearer access token required or invalid}
+        '403': {description: Active organization membership required}
+        '404': {description: Resource not found in the requested organization}
+    patch:
+      operationId: updateUnit
+      summary: Update selected unit fields
+      description: Requires PROPERTY_MANAGE. Omitted fields retain their values. Set floorNumber or areaSqm to null to
+        clear it.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/UpdateUnit'}
+      responses:
+        '200':
+          description: Updated unit
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Unit'}
+        '400': {description: Invalid request}
+        '401': {description: Bearer access token required or invalid}
+        '403': {description: Active organization membership and the required permission are required}
+        '404': {description: Resource not found in the requested organization}
+        '409': {description: Property is archived or the unit number is already in use}
+  /api/v1/organizations/{organizationId}/properties/{propertyId}/units/{unitId}/availability:
+    parameters:
+    - name: organizationId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    - name: propertyId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    - name: unitId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    patch:
+      operationId: updateUnitAvailability
+      summary: Update unit availability
+      description: Requires PROPERTY_MANAGE. Change between AVAILABLE and UNAVAILABLE. Transitions into or out of OCCUPIED
+        are managed through leases. Resubmitting the current value succeeds on an active property.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/UnitAvailabilityRequest'}
+      responses:
+        '200':
+          description: Unit with current availability
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Unit'}
+        '400': {description: Invalid request}
+        '401': {description: Bearer access token required or invalid}
+        '403': {description: Active organization membership and the required permission are required}
+        '404': {description: Resource not found in the requested organization}
+        '409': {description: Property is archived or the requested change involves OCCUPIED}
+components:
+  securitySchemes:
+    bearerAuth: {type: http, scheme: bearer, bearerFormat: JWT}
+  schemas:
+    PropertyType: {type: string, enum: [APARTMENT, HOUSE, COMMERCIAL, MIXED_USE, LAND, OTHER]}
+    PropertyStatus: {type: string, enum: [ACTIVE, ARCHIVED]}
+    CreateProperty:
+      type: object
+      required: [name, propertyType, addressLine1, city, countryCode]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 150, pattern: \S}
+        propertyType: {$ref: '#/components/schemas/PropertyType'}
+        addressLine1: {type: string, minLength: 1, maxLength: 255, pattern: \S}
+        addressLine2: {type: [string, 'null'], maxLength: 255}
+        city: {type: string, minLength: 1, maxLength: 100, pattern: \S}
+        countryCode: {type: string, pattern: '^[A-Z]{2}$'}
+    UpdateProperty:
+      type: object
+      required: []
+      properties:
+        name: {type: string, minLength: 1, maxLength: 150, pattern: \S}
+        propertyType: {$ref: '#/components/schemas/PropertyType'}
+        addressLine1: {type: string, minLength: 1, maxLength: 255, pattern: \S}
+        addressLine2: {type: [string, 'null'], maxLength: 255}
+        city: {type: string, minLength: 1, maxLength: 100, pattern: \S}
+        countryCode: {type: string, pattern: '^[A-Z]{2}$'}
+      minProperties: 1
+      additionalProperties: false
+    Property:
+      type: object
+      required: [id, organizationId, name, propertyType, addressLine1, addressLine2, city, countryCode, status, createdAt,
+        updatedAt]
+      properties:
+        id: {type: string, format: uuid}
+        organizationId: {type: string, format: uuid}
+        name: {type: string, minLength: 1, maxLength: 150, pattern: \S}
+        propertyType: {$ref: '#/components/schemas/PropertyType'}
+        addressLine1: {type: string, minLength: 1, maxLength: 255, pattern: \S}
+        addressLine2: {type: [string, 'null'], maxLength: 255}
+        city: {type: string, minLength: 1, maxLength: 100, pattern: \S}
+        countryCode: {type: string, pattern: '^[A-Z]{2}$'}
+        status: {$ref: '#/components/schemas/PropertyStatus'}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+    PropertyPage:
+      type: object
+      required: [content, page, size, totalElements, totalPages, first, last]
+      properties:
+        content:
+          type: array
+          items: {$ref: '#/components/schemas/Property'}
+        page: {type: integer, minimum: 0}
+        size: {type: integer, minimum: 1, maximum: 100}
+        totalElements: {type: integer, format: int64, minimum: 0}
+        totalPages: {type: integer, minimum: 0}
+        first: {type: boolean}
+        last: {type: boolean}
+    CreateUnit:
+      type: object
+      required: [unitNumber, unitType]
+      properties:
+        unitNumber: {type: string, minLength: 1, maxLength: 50, pattern: \S}
+        unitType: {type: string, enum: [APARTMENT, OFFICE, SHOP, OTHER]}
+        floorNumber: {type: [integer, 'null'], format: int32}
+        areaSqm: {type: [number, 'null'], exclusiveMinimum: 0, maximum: 9999999999.99, multipleOf: 0.01}
+    UpdateUnit:
+      type: object
+      required: []
+      properties:
+        unitNumber: {type: string, minLength: 1, maxLength: 50, pattern: \S}
+        unitType: {type: string, enum: [APARTMENT, OFFICE, SHOP, OTHER]}
+        floorNumber: {type: [integer, 'null'], format: int32}
+        areaSqm: {type: [number, 'null'], exclusiveMinimum: 0, maximum: 9999999999.99, multipleOf: 0.01}
+      minProperties: 1
+      additionalProperties: false
+    Unit:
+      type: object
+      required: [id, propertyId, unitNumber, unitType, floorNumber, areaSqm, availabilityStatus, createdAt, updatedAt]
+      properties:
+        id: {type: string, format: uuid}
+        propertyId: {type: string, format: uuid}
+        unitNumber: {type: string, minLength: 1, maxLength: 50, pattern: \S}
+        unitType: {type: string, enum: [APARTMENT, OFFICE, SHOP, OTHER]}
+        floorNumber: {type: [integer, 'null'], format: int32}
+        areaSqm: {type: [number, 'null'], exclusiveMinimum: 0, maximum: 9999999999.99, multipleOf: 0.01}
+        availabilityStatus: {$ref: '#/components/schemas/UnitAvailability'}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+    UnitPage:
+      type: object
+      required: [content, page, size, totalElements, totalPages, first, last]
+      properties:
+        content:
+          type: array
+          items: {$ref: '#/components/schemas/Unit'}
+        page: {type: integer, minimum: 0}
+        size: {type: integer, minimum: 1, maximum: 100}
+        totalElements: {type: integer, format: int64, minimum: 0}
+        totalPages: {type: integer, minimum: 0}
+        first: {type: boolean}
+        last: {type: boolean}
+    UnitAvailability: {type: string, enum: [AVAILABLE, OCCUPIED, UNAVAILABLE]}
+    UnitAvailabilityRequest:
+      type: object
+      required: [availabilityStatus]
+      properties:
+        availabilityStatus: {$ref: '#/components/schemas/UnitAvailability'}

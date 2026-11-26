@@ -1,0 +1,334 @@
+openapi: 3.1.0
+info:
+  title: Registration and authentication
+  version: 1.0.0
+  description: Use /api/v1/browser-auth for cookie-based browser sessions. POST requests under /api/v1/browser-auth require
+    an exact allowed Origin and the CSRF token returned by GET /api/v1/browser-auth/csrf, backed by the matching cookie.
+    Both cookies have HttpOnly, SameSite=Strict, and Path=/, with Secure set in production. The /api/v1/auth endpoints
+    return refresh tokens in JSON for clients that manage their own tokens.
+paths:
+  /api/v1/users/register:
+    post:
+      operationId: registerWorkspace
+      summary: Register an account and workspace
+      description: Creates the account as the workspace owner and places the workspace in pending review. Sign in separately
+        to obtain tokens.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/RegistrationRequest'}
+      responses:
+        '201':
+          description: Account and workspace created
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/RegistrationResult'}
+        '400':
+          description: Malformed or invalid request body
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+        '409':
+          description: Email address or organization slug is already taken
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+  /api/v1/browser-auth/csrf:
+    get:
+      operationId: getBrowserCsrfToken
+      summary: Initialize browser CSRF protection
+      responses:
+        '200':
+          description: CSRF token valid for one hour
+          headers:
+            Set-Cookie:
+              description: Sets the HttpOnly CSRF cookie. The name is __Host-csrf in production and dev-csrf in development.
+              schema: {type: string}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CsrfToken'}
+  /api/v1/browser-auth/login:
+    post:
+      operationId: loginBrowser
+      summary: Sign in a browser client
+      parameters:
+      - {$ref: '#/components/parameters/Origin'}
+      - {$ref: '#/components/parameters/CsrfToken'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/LoginRequest'}
+      responses:
+        '200':
+          description: Bearer access token and refresh cookie
+          headers:
+            Set-Cookie:
+              description: Sets the HttpOnly refresh cookie. The name is __Host-refresh in production and dev-refresh
+                in development.
+              schema: {type: string}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AccessToken'}
+        '400':
+          description: Malformed or invalid request body
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+        '401':
+          description: Invalid email or password
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+        '403':
+          description: Origin or CSRF validation failed
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/BrowserRequestRejected'}
+  /api/v1/browser-auth/refresh:
+    post:
+      operationId: refreshBrowserSession
+      summary: Rotate the browser refresh token
+      description: The browser must send the current refresh cookie. The request has no body.
+      parameters:
+      - {$ref: '#/components/parameters/Origin'}
+      - {$ref: '#/components/parameters/CsrfToken'}
+      responses:
+        '200':
+          description: New access token and rotated refresh cookie
+          headers:
+            Set-Cookie:
+              description: Sets the HttpOnly refresh cookie. The name is __Host-refresh in production and dev-refresh
+                in development.
+              schema: {type: string}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AccessToken'}
+        '401':
+          description: Invalid, expired, revoked, or missing refresh token
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+        '403':
+          description: Origin or CSRF validation failed
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/BrowserRequestRejected'}
+  /api/v1/browser-auth/session:
+    get:
+      operationId: getBrowserSession
+      summary: Read the signed-in user and active memberships
+      security:
+      - {bearerAuth: []}
+      responses:
+        '200':
+          description: Current user and active organization memberships
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Session'}
+        '401': {description: 'Bearer token missing or invalid, or the user is unavailable'}
+  /api/v1/browser-auth/logout:
+    post:
+      operationId: logoutBrowser
+      summary: End the browser session
+      description: Revokes the refresh token family when a valid refresh cookie is supplied and clears the cookie. The
+        request has no body.
+      parameters:
+      - {$ref: '#/components/parameters/Origin'}
+      - {$ref: '#/components/parameters/CsrfToken'}
+      responses:
+        '204':
+          description: Refresh cookie cleared
+          headers:
+            Set-Cookie:
+              description: Expires the refresh cookie with Max-Age=0.
+              schema: {type: string}
+        '403':
+          description: Origin or CSRF validation failed
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/BrowserRequestRejected'}
+  /api/v1/auth/login:
+    post:
+      operationId: loginApi
+      summary: Sign in with JSON credentials
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/LoginRequest'}
+      responses:
+        '200':
+          description: Access token, refresh token, user details, and active organization memberships
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/LoginResult'}
+        '400':
+          description: Malformed or invalid request body
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+        '401':
+          description: Invalid email or password
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+  /api/v1/auth/refresh:
+    post:
+      operationId: refreshApiToken
+      summary: Rotate a JSON refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/RefreshRequest'}
+      responses:
+        '200':
+          description: New access and refresh tokens
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/RefreshResult'}
+        '400':
+          description: Malformed or invalid request body
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+        '401':
+          description: Invalid, expired, revoked, or missing refresh token
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+components:
+  securitySchemes:
+    bearerAuth: {type: http, scheme: bearer, bearerFormat: JWT}
+  parameters:
+    Origin:
+      name: Origin
+      in: header
+      required: true
+      description: Exact origin from the server allowlist, including scheme and port when applicable
+      schema: {type: string}
+    CsrfToken:
+      name: X-CSRF-TOKEN
+      in: header
+      required: true
+      description: Token returned by the CSRF endpoint. Send the matching CSRF cookie with this request.
+      schema: {type: string}
+  schemas:
+    RegistrationRequest:
+      type: object
+      required: [email, password, firstName, lastName, organizationName, organizationSlug]
+      properties:
+        email: {type: string, minLength: 1, maxLength: 320, pattern: \S, format: email}
+        password: {type: string, format: password, minLength: 12, maxLength: 72, pattern: \S, description: Minimum 12
+            characters. Maximum 72 UTF-8 bytes.}
+        firstName: {type: string, minLength: 1, maxLength: 100, pattern: \S}
+        lastName: {type: string, minLength: 1, maxLength: 100, pattern: \S}
+        organizationName: {type: string, minLength: 1, maxLength: 150, pattern: \S}
+        organizationSlug: {type: string, minLength: 1, maxLength: 100, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'}
+    RegistrationResult:
+      type: object
+      required: [userId, email, firstName, lastName, organizationId, organizationName, organizationSlug, role]
+      properties:
+        userId: {type: string, format: uuid}
+        email: {type: string, format: email}
+        firstName: {type: string}
+        lastName: {type: string}
+        organizationId: {type: string, format: uuid}
+        organizationName: {type: string}
+        organizationSlug: {type: string}
+        role: {type: string, enum: [OWNER]}
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: {type: string, minLength: 1, maxLength: 320, pattern: \S, format: email}
+        password: {type: string, minLength: 1, maxLength: 72, pattern: \S, format: password}
+    RefreshRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken: {type: string, minLength: 1, pattern: \S}
+    CsrfToken:
+      type: object
+      required: [csrfToken]
+      properties:
+        csrfToken: {type: string}
+    AccessToken:
+      type: object
+      required: [accessToken, tokenType, expiresIn]
+      properties:
+        accessToken: {type: string}
+        tokenType: {type: string, enum: [Bearer]}
+        expiresIn: {type: integer, format: int64, description: Access token lifetime in seconds}
+    RefreshResult:
+      type: object
+      required: [accessToken, tokenType, expiresIn, refreshToken]
+      properties:
+        accessToken: {type: string}
+        tokenType: {type: string, enum: [Bearer]}
+        expiresIn: {type: integer, format: int64, description: Access token lifetime in seconds}
+        refreshToken: {type: string}
+    LoginResult:
+      type: object
+      required: [accessToken, tokenType, expiresIn, refreshToken, userId, email, firstName, lastName, organizations]
+      properties:
+        accessToken: {type: string}
+        tokenType: {type: string, enum: [Bearer]}
+        expiresIn: {type: integer, format: int64, description: Access token lifetime in seconds}
+        refreshToken: {type: string}
+        userId: {type: string, format: uuid}
+        email: {type: string, format: email}
+        firstName: {type: string}
+        lastName: {type: string}
+        organizations:
+          type: array
+          items: {$ref: '#/components/schemas/ApiLoginMembership'}
+    Session:
+      type: object
+      required: [user, organizations]
+      properties:
+        user:
+          type: object
+          required: [id, email, firstName, lastName]
+          properties:
+            id: {type: string, format: uuid}
+            email: {type: string, format: email}
+            firstName: {type: string}
+            lastName: {type: string}
+        organizations:
+          type: array
+          items: {$ref: '#/components/schemas/Membership'}
+    ApiLoginMembership:
+      type: object
+      required: [organizationId, organizationName, organizationSlug, role]
+      properties:
+        organizationId: {type: string, format: uuid}
+        organizationName: {type: string}
+        organizationSlug: {type: string}
+        role: {type: string, enum: [owner, admin, manager, staff]}
+    Membership:
+      type: object
+      required: [organizationId, organizationName, organizationSlug, role]
+      properties:
+        organizationId: {type: string, format: uuid}
+        organizationName: {type: string}
+        organizationSlug: {type: string}
+        role: {type: string, enum: [OWNER, ADMIN, MANAGER, STAFF]}
+    Error:
+      type: object
+      required: [timestamp, status, error, message, path]
+      properties:
+        timestamp: {type: string, format: date-time}
+        status: {type: integer}
+        error: {type: string}
+        message: {type: string}
+        path: {type: string}
+    BrowserRequestRejected:
+      type: object
+      required: [status, error, message]
+      properties:
+        status: {type: integer, const: 403}
+        error: {type: string}
+        message: {type: string}

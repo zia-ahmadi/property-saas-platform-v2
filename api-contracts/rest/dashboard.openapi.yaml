@@ -1,0 +1,43 @@
+openapi: 3.1.0
+info:
+  title: Workspace dashboard
+  version: 1.0.0
+  description: Summary counts for an active organization workspace.
+security:
+- {bearerAuth: []}
+paths:
+  /api/v1/organizations/{organizationId}/dashboard/summary:
+    parameters:
+    - name: organizationId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    get:
+      operationId: getDashboardSummary
+      summary: Read property and unit counts
+      description: Requires PROPERTY_VIEW.
+      responses:
+        '200':
+          description: Workspace dashboard totals
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DashboardSummary'}
+        '400': {description: Invalid request}
+        '401': {description: Bearer access token required or invalid}
+        '403': {description: Active organization membership and the required permission are required}
+components:
+  securitySchemes:
+    bearerAuth: {type: http, scheme: bearer, bearerFormat: JWT}
+  schemas:
+    DashboardSummary:
+      type: object
+      required: [totalProperties, activeProperties, archivedProperties, totalUnits, availableUnits, unavailableUnits,
+        occupiedUnits]
+      properties:
+        totalProperties: {type: integer, format: int64, minimum: 0}
+        activeProperties: {type: integer, format: int64, minimum: 0}
+        archivedProperties: {type: integer, format: int64, minimum: 0}
+        totalUnits: {type: integer, format: int64, minimum: 0}
+        availableUnits: {type: integer, format: int64, minimum: 0}
+        unavailableUnits: {type: integer, format: int64, minimum: 0}
+        occupiedUnits: {type: integer, format: int64, minimum: 0}

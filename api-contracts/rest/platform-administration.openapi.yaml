@@ -125,7 +125,7 @@ paths:
               required: [action]
               properties:
                 action: { type: string, enum: [approve, reject, suspend, reinstate, ban] }
-                reason: { type: string, maxLength: 2000, description: Required for reject, suspend, and ban }
+                reason: { type: string, maxLength: 2000, description: "Required for reject, suspend, and ban" }
       responses:
         '200': { description: Decision recorded }
         '400': { description: Invalid decision or missing reason }
@@ -228,7 +228,7 @@ paths:
         $ref: '#/components/requestBodies/Token'
       responses:
         '200': { description: Invitation accepted }
-        '409': { description: Invalid, expired, used, or unavailable invitation }
+        '409': { description: "Invalid, expired, used, or unavailable invitation" }
   /invitations/accept-new:
     post:
       security: []

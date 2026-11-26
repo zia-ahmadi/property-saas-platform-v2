@@ -35,14 +35,29 @@ paths:
         '401': { description: Bearer token required }
         '403': { description: Inactive or unavailable account }
   /api/v1/organizations/{organizationId}:
+    parameters:
+      - name: organizationId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: getOrganization
+      summary: Read workspace settings
+      description: Requires active organization membership and ORGANIZATION_VIEW.
+      responses:
+        '200':
+          description: Current workspace
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '400': { description: Invalid organization ID }
+        '401': { description: Bearer token required }
+        '403': { description: Active membership and organization viewing permission required }
+        '404': { description: Organization not found }
     patch:
       summary: Rename an active organization workspace
       description: Requires ORGANIZATION_MANAGE. The workspace slug is stable.
-      parameters:
-        - name: organizationId
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
       requestBody:
         required: true
         content:
@@ -59,17 +74,21 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                required: [id, name, slug, status]
-                properties:
-                  id: { type: string, format: uuid }
-                  name: { type: string }
-                  slug: { type: string }
-                  status: { type: string }
+                $ref: '#/components/schemas/Organization'
         '400': { description: Invalid name }
         '401': { description: Bearer token required }
         '403': { description: Active organization management permission required }
+        '404': { description: Organization not found }
         '409': { description: Workspace changed since the edit started }
 components:
   securitySchemes:
     bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  schemas:
+    Organization:
+      type: object
+      required: [id, name, slug, status]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        slug: { type: string }
+        status: { type: string, description: Lowercase workspace status }

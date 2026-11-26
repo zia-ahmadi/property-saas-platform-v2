@@ -50,7 +50,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Lease' }
-        '400': { description: Invalid terms, unit, or renter }
+        '400': { description: "Invalid terms, unit, or renter" }
         '403': { description: Organization access or permission denied }
   /api/v1/organizations/{organizationId}/leases/units:
     parameters:
@@ -127,7 +127,7 @@ paths:
                 version: { type: integer, minimum: 0 }
       responses:
         '200': { $ref: '#/components/responses/Lease' }
-        '400': { description: Invalid terms, unit, or renter }
+        '400': { description: "Invalid terms, unit, or renter" }
         '403': { description: Organization access or permission denied }
         '404': { description: Lease not found }
         '409': { description: Lease is no longer a draft or the version is stale }
@@ -167,7 +167,7 @@ paths:
         '400': { description: Invalid input or an inactive renter or property }
         '403': { description: Organization access or permission denied }
         '404': { description: Lease not found }
-        '409': { description: Transition conflicts with lease version, status, dates, or unit availability }
+        '409': { description: "Transition conflicts with lease version, status, dates, or unit availability" }
 components:
   securitySchemes:
     bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
